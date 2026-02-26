@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tapcart Screenshot Generator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        input[type=range] { accent-color: #3f1efb; }
+        input[type=color] { cursor: pointer; }
+        .section-label { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; display: block; }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"><style>body,button,input,select,textarea{font-family:'Inter',system-ui,sans-serif;}</style></head>
+<body class="bg-gray-100">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+const Icon = ({ d, size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {Array.isArray(d) ? d.map((p,i) => <path key={i} d={p}/>) : <path d={d}/>}
+    </svg>
+);
+
+const TRANSLATIONS = {
+    en: [
+        { headline: 'EXCLUSIVE ACCESS',  subheadline: 'EVERYTHING YOU LOVE IN ONE PLACE' },
+        { headline: 'EASY BROWSING',     subheadline: 'BROWSE ALL OF OUR COLLECTIONS & CONTENT' },
+        { headline: 'EXPLORE PRODUCTS',  subheadline: 'SHOP YOUR FAVORITE PRODUCTS' },
+        { headline: 'MANAGE IT ALL',     subheadline: 'Your orders and account details, always at hand' },
+        { headline: 'SECURE CHECKOUT',   subheadline: 'FAST AND SECURE CHECKOUT' },
+    ],
+    es: [
+        { headline: 'ACCESO EXCLUSIVO',   subheadline: 'Todo lo que amas en un solo lugar' },
+        { headline: 'NAVEGACIÓN FÁCIL',   subheadline: 'Explora todas nuestras colecciones y contenido' },
+        { headline: 'DESCUBRE PRODUCTOS', subheadline: 'Compra tus productos favoritos' },
+        { headline: 'GESTIÓNALO TODO',    subheadline: 'Tus pedidos y datos, siempre a mano' },
+        { headline: 'PAGO SEGURO',        subheadline: 'Pago rápido y protegido' },
+    ],
+    fr: [
+        { headline: 'ACCÈS EXCLUSIF',        subheadline: 'Tout ce que vous aimez au même endroit' },
+        { headline: 'NAVIGATION FLUIDE',     subheadline: 'Parcourez nos collections et contenus' },
+        { headline: 'EXPLORER NOS PRODUITS', subheadline: 'Achetez vos articles favoris' },
+        { headline: 'TOUT GÉRER',            subheadline: 'Vos commandes et infos, toujours à portée' },
+        { headline: 'PAIEMENT SÉCURISÉ',     subheadline: 'Paiement rapide et sécurisé' },
+    ],
+    de: [
+        { headline: 'EXKLUSIVER ZUGANG',  subheadline: 'Alles was du liebst an einem Ort' },
+        { headline: 'EINFACHES BROWSEN',  subheadline: 'Entdecke alle unsere Kollektionen & Inhalte' },
+        { headline: 'PRODUKTE ENTDECKEN', subheadline: 'Shoppe deine Lieblingsprodukte' },
+        { headline: 'ALLES IM GRIFF',     subheadline: 'Deine Bestellungen und Daten, immer dabei' },
+        { headline: 'SICHER BEZAHLEN',    subheadline: 'Schneller und sicherer Checkout' },
+    ],
+    pt: [
+        { headline: 'ACESSO EXCLUSIVO',  subheadline: 'Tudo o que você ama em um só lugar' },
+        { headline: 'NAVEGAÇÃO FÁCIL',   subheadline: 'Explore todas as nossas coleções e conteúdo' },
+        { headline: 'EXPLORE PRODUTOS',  subheadline: 'Compre seus produtos favoritos' },
+        { headline: 'GERENCIE TUDO',     subheadline: 'Seus pedidos e dados, sempre à mão' },
+        { headline: 'CHECKOUT SEGURO',   subheadline: 'Pagamento rápido e seguro' },
+    ],
+};
+
+// Slot order: Home, PLP, PDP, Account, Cart
+const SLOT_LABELS = ['Home', 'PLP', 'PDP', 'Account', 'Cart'];
+
+const DEFAULT_SHOTS = [1,2,3,4,5].map(id => ({
+    id,
+    label: SLOT_LABELS[id-1],
+    deviceType: 'iphone',
+    headline: TRANSLATIONS.en[id-1].headline,
+    subheadline: TRANSLATIONS.en[id-1].subheadline,
+    backgroundColor: '#000000', textColor: '#ffffff',
+    screenshotImage: null, containerScale: 1, containerX: 0, containerY: 0,
+}));
+
+const DEVICE_SPECS = {
+    iphone:  { cw: 1242, ch: 2688, dw: 1000, dh: 1991, cr: 60, dy: 440 },
+    android: { cw: 1080, ch: 2280, dw: 900,  dh: 1813, cr: 40, dy: 350 },
+};
+
+const extractBrandKit = (data) => {
+    const kit = { primaryColor: null, backgroundColor: null, textColor: null, fontFamily: null, fontRaw: null, fontSrc: null, fontWeight: 400, raw: {}, foundAt: null, allColors: {} };
+    try {
+        const ensureHash = v => {
+            if (!v || typeof v !== 'string') return null;
+            const clean = v.replace(/^#/, '').trim();
+            if (clean.length === 8) return '#' + clean.slice(0, 6);
+            if (clean.length === 6) return '#' + clean;
+            if (clean.length === 3) return '#' + clean;
+            return null;
+        };
+        const isColorLike = v => typeof v === 'string' && /^#?[0-9a-fA-F]{3,8}$/.test(v.trim());
+        const findTheme = (obj, path) => {
+            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+            if ('core_brandColorPrimary' in obj) return { obj, path };
+            for (const k of Object.keys(obj)) {
+                const found = findTheme(obj[k], `${path}.${k}`);
+                if (found) return found;
+            }
+            return null;
+        };
+        const result = findTheme(data, 'root');
+        if (result) {
+            const { obj, path } = result;
+            kit.raw = obj; kit.foundAt = path;
+            kit.backgroundColor = ensureHash(obj.core_brandColorPrimary);
+            kit.textColor       = ensureHash(obj.button_primaryText);
+            const fp = obj.typography_font_primary;
+            if (fp?.fontFamily) {
+                kit.fontFamily = fp.fontFamily;
+                kit.fontRaw    = fp.fullName || fp.fontFamily;
+                kit.fontSrc    = fp.src || null;
+                kit.fontWeight = fp.fontWeight || 400;
+            }
+            const seenHex = new Set();
+            const colorEntries = [];
+            const scanObj = (o, keyPrefix) => {
+                if (!o || typeof o !== 'object' || Array.isArray(o)) return;
+                for (const k of Object.keys(o)) {
+                    const v = o[k];
+                    if (typeof v === 'string' && isColorLike(v)) {
+                        const hex = ensureHash(v);
+                        if (hex && !seenHex.has(hex)) {
+                            seenHex.add(hex);
+                            colorEntries.push({ key: keyPrefix ? `${keyPrefix}_${k}` : k, hex });
+                        }
+                    } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+                        scanObj(v, k);
+                    }
+                }
+            };
+            scanObj(obj, '');
+            const groups = {};
+            for (const entry of colorEntries) {
+                const seg = entry.key.replace(/^_/, '').split('_')[0] || 'other';
+                if (!groups[seg]) groups[seg] = [];
+                groups[seg].push(entry);
+            }
+            kit.allColors = groups;
+        } else {
+            kit.raw = data?.config?.settings || {};
+        }
+    } catch(e) { console.warn('[BrandKit] error', e); }
+    return kit;
+};
+
+const Accordion = ({ title, children, defaultOpen = false, forceOpen }) => {
+    const [open, setOpen] = useState(defaultOpen);
+    useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
+    return (
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <button onClick={() => setOpen(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left">
+                <span className="text-xs font-semibold text-gray-700">{title}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"
+                    style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .18s' }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            {open && <div className="px-4 py-3 space-y-3 bg-white border-t border-gray-100">{children}</div>}
+        </div>
+    );
+};
+
+const Slider = ({ label, value, onChange, min, max, unit = 'px' }) => (
+    <div>
+        <div className="flex justify-between items-center mb-1">
+            <span className="text-xs text-gray-500">{label}</span>
+            <div className="flex items-center gap-1">
+                <input type="number" min={min} max={max} value={value}
+                    onChange={e => { const v=+e.target.value; if(!isNaN(v)) onChange(Math.min(max,Math.max(min,v))); }}
+                    className="w-14 px-1.5 py-0.5 border border-gray-200 rounded text-[10px] font-medium text-gray-700 tabular-nums text-right focus:outline-none focus:ring-1 focus:ring-[#3f1efb]"/>
+                <span className="text-[10px] text-gray-400">{unit}</span>
+            </div>
+        </div>
+        <input type="range" min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="w-full h-1.5" />
+    </div>
+);
+
+const ColorInput = ({ label, value, onChange }) => (
+    <div>
+        {label && <span className="text-xs text-gray-500 block mb-1.5">{label}</span>}
+        <div className="flex items-center gap-2">
+            <input type="color" value={value} onChange={e => onChange(e.target.value)}
+                className="w-8 h-8 rounded-lg border border-gray-200 p-0.5 flex-shrink-0" />
+            <span className="text-xs font-mono text-gray-500">{value}</span>
+        </div>
+    </div>
+);
+
+const Btn = ({ onClick, disabled, children, variant = 'default', className = '' }) => {
+    const variants = {
+        default:  'bg-gray-900 text-white hover:bg-gray-700',
+        primary:  'bg-[#3f1efb] text-white hover:bg-[#2e14d5]',
+        danger:   'bg-red-500 text-white hover:bg-red-600',
+        ghost:    'bg-gray-100 text-gray-700 hover:bg-gray-200',
+        orange:   'bg-[#3f1efb] text-white hover:bg-[#2e14d5]',
+    };
+    return (
+        <button onClick={onClick} disabled={disabled}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5 ${variants[variant]} ${className}`}>
+            {children}
+        </button>
+    );
+};
+
+const LibThumb = ({ item, inUse, isSelected, onSelect, onDelete }) => (
+    <div onClick={onSelect}
+        className={`relative rounded-lg overflow-hidden cursor-pointer group transition-all border-2 ${isSelected ? 'border-[#3f1efb] shadow-lg' : 'border-transparent hover:border-[#8a76f8]'}`}
+        style={{ aspectRatio: '390/844' }}>
+        <img src={item.dataUrl} alt={item.label} className="w-full h-full object-cover" />
+        <div className={`absolute inset-0 flex flex-col items-center justify-end pb-1.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            style={{ background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.7))' }}>
+            <span className="text-white text-[8px] font-bold px-1 text-center leading-tight">{item.label}</span>
+        </div>
+        {inUse && <div className="absolute top-1 right-1 bg-[#3f1efb] text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full">IN USE</div>}
+        <button onClick={e => { e.stopPropagation(); onDelete(); }}
+            className="absolute top-1 left-1 bg-black/60 text-white rounded-full w-4 h-4 text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+    </div>
+);
+
+const getLuminance = hex => {
+    try {
+        const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+        const tl=c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+        return 0.2126*tl(r)+0.7152*tl(g)+0.0722*tl(b);
+    } catch { return 0; }
+};
+const getContrast = (h1,h2) => { try { const l1=getLuminance(h1),l2=getLuminance(h2); return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); } catch { return 1; } };
+const isValidHex = h => h && /^#[0-9a-fA-F]{6}$/.test(h);
+const friendlyKey = key => key.replace(/^_/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim();
+const GROUP_LABELS = {core:'Core',button:'Button',nav:'Navigation',tab:'Tab Bar',card:'Card',text:'Text',icon:'Icon',border:'Border',background:'Background',badge:'Badge',header:'Header',product:'Product',search:'Search',modal:'Modal',toast:'Toast',other:'Other'};
+
+const SuggestColors = ({ allColors, onApplyBg, onApplyText }) => {
+    const [open, setOpen]         = useState(false);
+    const [pickMode, setPickMode] = useState(null);
+    const [selBg, setSelBg]       = useState(null);
+    const [selText, setSelText]   = useState(null);
+    const [hovered, setHovered]   = useState(null);
+
+    const handleSwatch = hex => {
+        if (pickMode==='bg')        { setSelBg(hex);   setPickMode(null); }
+        else if (pickMode==='text') { setSelText(hex); setPickMode(null); }
+        else if (!selBg)            { setSelBg(hex);   setPickMode('text'); }
+        else if (!selText)          { setSelText(hex); setPickMode(null); }
+        else                        { setSelBg(hex);   setPickMode('text'); }
+    };
+
+    return (
+        <div className="border-t border-gray-100">
+            <button onClick={()=>setOpen(v=>!v)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-[#f0effe] hover:bg-[#e8e5fe] transition-colors">
+                <span className="text-[10px] font-bold text-[#3f1efb] uppercase tracking-wide">✨ Suggest Colors</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2.5" style={{transform:open?"rotate(180deg)":"rotate(0)",transition:"transform .18s"}}>
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            {open && (
+                <div className="px-3 py-3 space-y-3 bg-white">
+                    <p className="text-[9px] text-gray-400 leading-relaxed">Click swatches to build a color pair — BG first, then Text. Preview contrast and apply to all slots.</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        <button onClick={()=>setPickMode(pickMode==="bg"?null:"bg")}
+                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="bg"?"bg-[#3f1efb] text-white border-[#3f1efb]":"border-gray-300 text-gray-600 hover:border-[#3f1efb]")}>
+                            {selBg && <span className="w-2.5 h-2.5 rounded-full border border-black/20 inline-block flex-shrink-0" style={{background:selBg}}/>}
+                            {selBg ? selBg : "BG color"}
+                        </button>
+                        <button onClick={()=>setPickMode(pickMode==="text"?null:"text")}
+                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="text"?"bg-[#3f1efb] text-white border-[#3f1efb]":"border-gray-300 text-gray-600 hover:border-[#3f1efb]")}>
+                            {selText && <span className="w-2.5 h-2.5 rounded-full border border-black/20 inline-block flex-shrink-0" style={{background:selText}}/>}
+                            {selText ? selText : "Text color"}
+                        </button>
+                        {(selBg||selText) && (
+                            <button onClick={()=>{setSelBg(null);setSelText(null);setPickMode(null);}} className="px-2 py-1 rounded-full text-[10px] text-gray-400 border border-gray-200 hover:bg-gray-100">✕</button>
+                        )}
+                    </div>
+                    {pickMode && (
+                        <p className="text-[9px] text-[#3f1efb] font-semibold animate-pulse">
+                            {pickMode==="bg" ? "👆 Click a swatch → Background" : "👆 Click a swatch → Text color"}
+                        </p>
+                    )}
+                    {selBg && selText && (
+                        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                            <div className="px-3 py-3" style={{background:selBg}}>
+                                <div className="text-[13px] font-black" style={{color:selText}}>Headline Text</div>
+                                <div className="text-[10px]" style={{color:selText,opacity:0.85}}>Subheadline text</div>
+                            </div>
+                            <div className="p-2">
+                                <button onClick={()=>{onApplyBg(selBg);onApplyText(selText);}}
+                                    className="w-full py-1.5 bg-[#3f1efb] text-white rounded-lg text-[10px] font-bold hover:bg-[#2e14d5] transition-colors">
+                                    Apply Pair to All Slots
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {selBg && !selText && (
+                        <button onClick={()=>onApplyBg(selBg)} className="w-full py-1.5 bg-[#3f1efb] text-white rounded-lg text-[10px] font-bold hover:bg-[#2e14d5] transition-colors">
+                            Apply BG Only
+                        </button>
+                    )}
+                    {Object.entries(allColors).map(([group, entries]) => {
+                        const valid = entries.filter(e => isValidHex(e.hex));
+                        if (!valid.length) return null;
+                        return (
+                            <div key={group}>
+                                <div className="text-[8px] font-extrabold text-gray-300 uppercase tracking-widest mb-1.5">{GROUP_LABELS[group] || group}</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {valid.map(entry => {
+                                        const isBg=selBg===entry.hex, isTx=selText===entry.hex, isHov=hovered===entry.key;
+                                        return (
+                                            <div key={entry.key} style={{position:"relative",display:"inline-block"}}>
+                                                <button onClick={()=>handleSwatch(entry.hex)} onMouseEnter={()=>setHovered(entry.key)} onMouseLeave={()=>setHovered(null)}
+                                                    style={{background:entry.hex,outline:isBg?"2.5px solid #6366f1":isTx?"2.5px solid #a855f7":"none",outlineOffset:"2px"}}
+                                                    className={"w-8 h-8 rounded-lg border border-black/10 transition-transform "+((isBg||isTx||isHov)?"scale-110 shadow-md":"hover:scale-105")}
+                                                    title={friendlyKey(entry.key)+": "+entry.hex}/>
+                                                {(isBg||isTx) && (
+                                                    <div style={{position:"absolute",top:"-4px",right:"-4px",width:"14px",height:"14px",borderRadius:"50%",background:isBg?"#6366f1":"#a855f7",color:"#fff",fontSize:"7px",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}>
+                                                        {isBg?"B":"T"}
+                                                    </div>
+                                                )}
+                                                {isHov && (
+                                                    <div style={{position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",zIndex:9999,pointerEvents:"none",whiteSpace:"nowrap"}}>
+                                                        <div style={{background:"#111827",color:"#fff",borderRadius:"8px",padding:"4px 8px",fontSize:"9px",textAlign:"center",boxShadow:"0 4px 12px rgba(0,0,0,0.3)"}}>
+                                                            <div style={{fontWeight:700}}>{friendlyKey(entry.key)}</div>
+                                                            <div style={{opacity:0.7,fontFamily:"monospace"}}>{entry.hex}</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const SearchSelect = ({ label, items, selected, onSelect, query, onQueryChange, searching, displayKey, valueKey }) => (
+    <div className="space-y-1">
+        <span className="section-label">{label}</span>
+        <div className="relative">
+            <input type="text" value={query} onChange={e => onQueryChange(e.target.value)} placeholder="Search…"
+                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb] pr-6" />
+            {searching
+                ? <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#3f1efb] animate-pulse">…</span>
+                : query ? <button onClick={() => onQueryChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">×</button> : null}
+        </div>
+        <select value={selected} onChange={e => onSelect(e.target.value)}
+            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb]">
+            {items.length === 0 ? <option>No results</option>
+                : items.map(i => <option key={i[valueKey]} value={i[valueKey]}>{i[displayKey]}</option>)}
+        </select>
+    </div>
+);
+
+function App() {
+    const [activeIdx, setActiveIdx]       = useState(0);
+    const [screenshots, setScreenshots]   = useState(DEFAULT_SHOTS);
+    const [library, setLibrary]           = useState([]);
+    const [libCounter, setLibCounter]     = useState(0);
+    const [selLibId, setSelLibId]         = useState(null);
+
+    const [hFont, setHFont]               = useState(null);
+    const [sFont, setSFont]               = useState(null);
+    const [hFontName, setHFontName]       = useState('');
+    const [sFontName, setSFontName]       = useState('');
+    const [hSize, setHSize]               = useState(68);
+    const [sSize, setSSize]               = useState(40);
+    const [hY, setHY]                     = useState(162);
+    const [sY, setSY]                     = useState(232);
+    const [hSp, setHSp]                   = useState(0);
+    const [sSp, setSSp]                   = useState(0);
+    const [hMg, setHMg]                   = useState(50);
+    const [sMg, setSMg]                   = useState(50);
+    const PREVIEW_SCALE                   = 0.3;
+    const [useGrad, setUseGrad]           = useState(false);
+    const [grad1, setGrad1]               = useState('#000000');
+    const [grad2, setGrad2]               = useState('#333333');
+    const [bgImg, setBgImg]               = useState(null);
+    const [bgOp, setBgOp]                 = useState(1);
+
+    const [dragHl, setDragHl]             = useState(false);
+    const [dragSub, setDragSub]           = useState(false);
+    const [dragCont, setDragCont]         = useState(false);
+    const [dragHnd, setDragHnd]           = useState(false);
+    const [dragShot, setDragShot]         = useState(false);
+    const [canDragShot, setCanDragShot]   = useState(false);
+    const [dragStart, setDragStart]       = useState({ x:0, y:0 });
+    const [shotX, setShotX]               = useState(0);
+    const [shotY, setShotY]               = useState(0);
+    const [showHnds, setShowHnds]         = useState(false);
+
+    const [shadow, setShadow]             = useState(false);
+    const [sBlur, setSBlur]               = useState(40);
+    const [sOp, setSOp]                   = useState(0.3);
+    const [sOffY, setSOffY]               = useState(20);
+    const [sColor, setSColor]             = useState('#000000');
+    const [guides, setGuides]             = useState(false);
+    const [tCase, setTCase]               = useState('uppercase');
+    const [lang, setLang]                 = useState('en');
+
+    const [appId, setAppId]               = useState('');
+    const [appName, setAppName]           = useState('');
+    const [loadingApp, setLoadingApp]     = useState(false);
+    const [appLinks, setAppLinks]         = useState(null);
+    const [capturing, setCapturing]       = useState(false);
+    const [capProg, setCapProg]           = useState('');
+    const [collections, setCollections]   = useState([]);
+    const [products, setProducts]         = useState([]);
+    const [selColl, setSelColl]           = useState('');
+    const [selProd, setSelProd]           = useState('');
+    const [collQ, setCollQ]               = useState('');
+    const [prodQ, setProdQ]               = useState('');
+    const [searchingC, setSearchingC]     = useState(false);
+    const [searchingP, setSearchingP]     = useState(false);
+    const [brandKit, setBrandKit]         = useState(null);
+
+    const canvasRef      = useRef(null);
+    const hFontRef       = useRef(null);
+    const sFontRef       = useRef(null);
+    const bgImgRef       = useRef(null);
+    const libUploadRef   = useRef(null);
+    const projectLoadRef = useRef(null);
+    const shopifyRef     = useRef(null);
+    const collTimer      = useRef(null);
+    const prodTimer      = useRef(null);
+
+    const cur  = screenshots[activeIdx];
+    const spec = DEVICE_SPECS[cur.deviceType];
+
+    const updCur = u => setScreenshots(ss => ss.map((s,i) => i===activeIdx ? {...s,...u} : s));
+    const updAll = u => setScreenshots(ss => ss.map(s => ({...s,...u})));
+
+    const applyCase = t => {
+        if (tCase==='uppercase')  return t.toUpperCase();
+        if (tCase==='lowercase')  return t.toLowerCase();
+        if (tCase==='capitalize') return t.split(' ').map(w=>w[0].toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+        return t;
+    };
+
+    const changeLang = l => {
+        setLang(l);
+        const tx = TRANSLATIONS[l]; if (!tx) return;
+        setScreenshots(ss => ss.map((s,i) => tx[i] ? {...s, headline:tx[i].headline, subheadline:tx[i].subheadline} : s));
+    };
+
+    const applyBrandKitData = async (kit) => {
+        if (!kit) return;
+        if (kit.backgroundColor || kit.textColor) {
+            updAll({
+                ...(kit.backgroundColor ? { backgroundColor: kit.backgroundColor } : {}),
+                ...(kit.textColor        ? { textColor: kit.textColor }             : {}),
+            });
+            setUseGrad(false); setBgImg(null);
+        }
+        if (kit.fontFamily) {
+            const name = kit.fontFamily;
+            try {
+                if (kit.fontSrc) {
+                    const face = new FontFace(name, `url(${kit.fontSrc})`, { weight: String(kit.fontWeight||400) });
+                    await face.load(); document.fonts.add(face);
+                } else {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@400;700&display=swap`;
+                    document.head.appendChild(link);
+                    await new Promise(r => setTimeout(r, 800));
+                }
+                setHFont(name); setHFontName(`${kit.fontRaw||name}`);
+                setSFont(name); setSFontName(`${kit.fontRaw||name}`);
+            } catch(e) { console.warn('[BrandKit] font failed', e); }
+        }
+    };
+
+    const addToLib = (dataUrl, label) => {
+        setLibCounter(n => {
+            const id = n+1;
+            setLibrary(lib => [...lib, {id, label, dataUrl}]);
+            return id;
+        });
+    };
+
+    const assignToSlot = item => {
+        updCur({ screenshotImage: item.dataUrl, containerScale:1, containerX:0, containerY:0 });
+        setSelLibId(item.id);
+    };
+
+    const usedUrls = new Set(screenshots.map(s=>s.screenshotImage).filter(Boolean));
+
+    const shopifyQuery = async (query) => {
+        if (!shopifyRef.current) return null;
+        const {uri, token} = shopifyRef.current;
+        const res = await fetch(uri, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-Shopify-Storefront-Access-Token':token},
+            body: JSON.stringify({query}),
+        });
+        return res.json();
+    };
+
+    const loadCollections = async q => {
+        setSearchingC(true);
+        try {
+            const filter = q.trim() ? `, query: "title:*${q.trim()}*"` : '';
+            const sd = await shopifyQuery(`{ collections(first:50, sortKey:UPDATED_AT, reverse:true${filter}) { nodes { handle title } } }`);
+            const cols = (sd?.data?.collections?.nodes||[]).filter(c=>c.handle!=='all');
+            setCollections(cols);
+            if (cols.length) {
+                if (!q.trim()) {
+                    const priority = ['new-arrivals','new_arrivals','newarrivals','best-sellers','best_sellers','bestsellers','featured','new','sale'];
+                    const preferred = cols.find(c => priority.some(p => c.handle.toLowerCase().includes(p) || c.title.toLowerCase().replace(/\s+/g,'-').includes(p)));
+                    const chosen = preferred ? preferred.handle : cols[0].handle;
+                    setSelColl(chosen); return chosen;
+                } else { setSelColl(cols[0].handle); return cols[0].handle; }
+            }
+        } catch(e) { console.warn(e); }
+        finally { setSearchingC(false); }
+        return '';
+    };
+
+    const loadProducts = async q => {
+        setSearchingP(true);
+        try {
+            const filter = q.trim() ? `, query: "title:*${q.trim()}*"` : '';
+            const sd = await shopifyQuery(`{ products(first:20, sortKey:UPDATED_AT, reverse:true${filter}) { nodes { id title } } }`);
+            const prods = (sd?.data?.products?.nodes||[]).map(p => { const m=p.id.match(/\d+$/); return {id:m?m[0]:null, title:p.title}; }).filter(p=>p.id);
+            setProducts(prods);
+            if (prods.length) { setSelProd(prods[0].id); return prods[0].id; }
+        } catch(e) { console.warn(e); }
+        finally { setSearchingP(false); }
+        return '';
+    };
+
+    const onCollQChange = v => { setCollQ(v); clearTimeout(collTimer.current); collTimer.current=setTimeout(()=>loadCollections(v),400); };
+    const onProdQChange = v => { setProdQ(v); clearTimeout(prodTimer.current); prodTimer.current=setTimeout(()=>loadProducts(v),400); };
+
+    const fetchApp = async () => {
+        if (!appId.trim()) return;
+        setLoadingApp(true); setAppLinks(null); setBrandKit(null); setAppName('');
+        setCollections([]); setProducts([]); setSelColl(''); setSelProd(''); setCollQ(''); setProdQ('');
+        try {
+            const res = await fetch(`https://api.tapcart.com/mobile-native/${appId}`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            const resolvedName = data.app?.title || appId;
+            setAppName(resolvedName);
+            console.log('[Tapcart] App name resolved to:', resolvedName);
+            const routes=data.config?.routes||{}, screens=data.screens||{};
+            const shopify=data.config?.settings?.environment?.platform?.shopify;
+            console.log('[Tapcart] Available routes:', routes);
+            console.log('[Tapcart] All screen keys:', Object.keys(screens));
+            const accountRouteKey = routes.account || routes.profile || routes.myAccount || routes.user || routes.settings || null;
+            const links = {
+                home:    routes.home    ? screens[routes.home]?.url    : null,
+                pdpBase: routes.pdp     ? screens[routes.pdp]?.url     : null,
+                plpBase: routes.plp     ? screens[routes.plp]?.url     : null,
+                cart:    routes.cart    ? screens[routes.cart]?.url    : null,
+                account: accountRouteKey ? screens[accountRouteKey]?.url : null,
+            };
+            console.log('[Tapcart] Resolved links:', links);
+            setAppLinks(links);
+            const kit = extractBrandKit(data);
+            setBrandKit(kit);
+            await applyBrandKitData(kit);
+            let captureSelColl = '', captureSelProd = '';
+            if (shopify?.shopifyApiKey && shopify?.storefrontApiURI) {
+                shopifyRef.current = {uri:shopify.storefrontApiURI, token:shopify.shopifyApiKey};
+                [captureSelColl, captureSelProd] = await Promise.all([loadCollections(''), loadProducts('')]);
+            }
+            setLoadingApp(false);
+            await runCaptureWithLinks(links, {clearFirst: true, captureSelColl, captureSelProd});
+        } catch { alert('❌ Failed to load app. Check the App ID.'); setLoadingApp(false); }
+    };
+
+    const runCaptureWithLinks = async (links, {clearFirst=false, captureSelColl, captureSelProd}={}) => {
+        if (!links) { alert('Load an app first'); return; }
+        setCapturing(true);
+        if (clearFirst) {
+            setLibrary([]); setLibCounter(0); setSelLibId(null);
+            setScreenshots(ss=>ss.map(s=>({...s,screenshotImage:null,containerScale:1,containerX:0,containerY:0})));
+        }
+        let captured=0, nextId=clearFirst?1:libCounter+1;
+        const useColl = captureSelColl !== undefined ? captureSelColl : selColl;
+        const useProd = captureSelProd !== undefined ? captureSelProd : selProd;
+        const pdpUrl = links.pdpBase&&useProd ? `${links.pdpBase}?productId=${useProd}` : links.pdpBase;
+        const plpUrl = links.plpBase&&useColl ? `${links.plpBase}?collectionHandle=${useColl}` : links.plpBase;
+        const scrollScript = encodeURIComponent(`(function(){var el=document.scrollingElement||document.body;el.scrollTop=800;setTimeout(function(){el.scrollTop=0;},800);})()`);
+        // Order: Home, PLP, PDP, Account — Cart is always manual
+        const slots = [
+            {url:links.home,    label:'Home',    waitFor:4000},
+            {url:plpUrl,        label:'PLP',     waitFor:7000},
+            {url:pdpUrl,        label:'PDP',     waitFor:6000},
+            {url:links.account, label:'Account', waitFor:5000},
+        ];
+        for (const slot of slots) {
+            if (!slot.url) continue;
+            setCapProg(`Capturing ${slot.label}… (up to ${slot.waitFor/1000}s)`);
+            try {
+                const apiUrl=`https://api.microlink.io/?url=${encodeURIComponent(slot.url)}&screenshot=true&meta=false&viewport.width=390&viewport.height=1200&viewport.deviceScaleFactor=2&waitFor=${slot.waitFor}&javascript=true&adblock=true${slot.scroll?'&scripts[]='+scrollScript:''}`;
+                const res=await fetch(apiUrl), data=await res.json();
+                const imgUrl=data?.data?.screenshot?.url;
+                if (!imgUrl) continue;
+                const proxied = `https://wsrv.nl/?url=${encodeURIComponent(imgUrl)}&output=png`;
+                const dataUrl = await new Promise(async(resolve,reject)=>{
+                    try{const r=await fetch(proxied);if(!r.ok)throw new Error(`Image proxy ${r.status}`);const b=await r.blob();const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(b);}catch(e){reject(e);}
+                });
+                const id=nextId++; setLibCounter(id);
+                setLibrary(lib=>[...(clearFirst?lib.filter(l=>l.id<id):lib), {id,label:slot.label,dataUrl}]);
+                captured++;
+            } catch(err) { console.error(slot.label, err); setCapProg(`⚠️ ${slot.label}: ${err.message||'failed'}`); await new Promise(r=>setTimeout(r,1500)); }
+        }
+        setCapProg(''); setCapturing(false);
+        if (captured>0) alert(`✅ ${captured} screenshot${captured>1?'s':''} captured!\n\nSlot 5 (Cart) requires a manual upload — use + Upload in the library.`);
+        else alert('❌ No screenshots captured.\n\nMost likely cause: Microlink free tier rate limit (50 req/day per IP). Wait 24hrs or upgrade to Microlink Pro.');
+    };
+
+    const runCapture = async ({clearFirst=false}={}) => runCaptureWithLinks(appLinks, {clearFirst});
+    const captureScreenshots   = () => runCapture({clearFirst:false});
+    const recaptureScreenshots = () => runCapture({clearFirst:true});
+
+    const uploadFont = async (e, isH) => {
+        const file=e.target.files[0]; if(!file) return;
+        const reader=new FileReader();
+        reader.onload=async ev=>{
+            try {
+                const name=file.name.replace(/\.(ttf|otf|woff|woff2)$/i,'')+(isH?'-h':'-s');
+                const face=new FontFace(name,ev.target.result); await face.load(); document.fonts.add(face);
+                if(isH){setHFont(name);setHFontName(file.name);}else{setSFont(name);setSFontName(file.name);}
+            } catch { alert('Failed to load font.'); }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    const uploadLibImages = e => {
+        Array.from(e.target.files).forEach(file=>{
+            const reader=new FileReader();
+            reader.onload=ev=>addToLib(ev.target.result, file.name.replace(/\.[^.]+$/,''));
+            reader.readAsDataURL(file);
+        }); e.target.value='';
+    };
+    const uploadBgImage = e => {
+        const file=e.target.files[0]; if(!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>{setBgImg(ev.target.result);setUseGrad(false);};
+        reader.readAsDataURL(file); e.target.value='';
+    };
+
+    const saveProject = () => {
+        const data={version:'1.6',screenshots,library,settings:{hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,useGrad,grad1,grad2,bgImg,bgOp,shadow,sBlur,sOp,sOffY,sColor,guides,tCase,lang}};
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+        a.download='tapcart-project.json'; a.click();
+    };
+    const loadProject = e => {
+        const file=e.target.files[0]; if(!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>{
+            try {
+                const d=JSON.parse(ev.target.result);
+                if(d.screenshots) setScreenshots(d.screenshots);
+                if(d.library) setLibrary(d.library);
+                const s=d.settings||{};
+                if(s.hSize!=null)setHSize(s.hSize);if(s.sSize!=null)setSSize(s.sSize);
+                if(s.hY!=null)setHY(s.hY);if(s.sY!=null)setSY(s.sY);
+                if(s.hSp!=null)setHSp(s.hSp);if(s.sSp!=null)setSSp(s.sSp);
+                if(s.hMg!=null)setHMg(s.hMg);if(s.sMg!=null)setSMg(s.sMg);
+                if(s.useGrad!=null)setUseGrad(s.useGrad);
+                if(s.grad1)setGrad1(s.grad1);if(s.grad2)setGrad2(s.grad2);
+                if(s.bgImg)setBgImg(s.bgImg);if(s.bgOp!=null)setBgOp(s.bgOp);
+                if(s.shadow!=null)setShadow(s.shadow);
+                if(s.sBlur!=null)setSBlur(s.sBlur);if(s.sOp!=null)setSOp(s.sOp);
+                if(s.sOffY!=null)setSOffY(s.sOffY);if(s.sColor)setSColor(s.sColor);
+                if(s.guides!=null)setGuides(s.guides);
+                if(s.tCase)setTCase(s.tCase);if(s.lang)setLang(s.lang);
+                alert('✅ Project loaded!');
+            } catch { alert('❌ Invalid project file.'); }
+        };
+        reader.readAsText(file); e.target.value='';
+    };
+
+    // ── Canvas ────────────────────────────────────────────────────────────────
+    const roundRect=(ctx,x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
+    const wrapText=(ctx,text,x,y,maxW,spacing,lh)=>{const words=text.split(' ');let line='',lines=[];for(let n=0;n<words.length;n++){const test=line+words[n]+' ';const w=spacing!==0?test.split('').reduce((s,c)=>s+ctx.measureText(c).width+spacing,0)-spacing:ctx.measureText(test).width;if(w>maxW&&n>0){lines.push(line);line=words[n]+' ';}else line=test;}lines.push(line);const startY=y-((lines.length-1)*lh)/2;lines.forEach((ln,i)=>{const ly=startY+i*lh;if(spacing!==0){const chars=ln.trim().split('');let tw=0;const cws=chars.map(c=>{const cw=ctx.measureText(c).width;tw+=cw+spacing;return cw;});tw-=spacing;let cx=x-tw/2;chars.forEach((c,j)=>{ctx.fillText(c,cx+cws[j]/2,ly);cx+=cws[j]+spacing;});}else ctx.fillText(ln.trim(),x,ly);});};
+
+    const renderToCanvas=async(ss,canvas)=>{
+        if(!canvas) return;
+        const ctx=canvas.getContext('2d'),sp=DEVICE_SPECS[ss.deviceType];
+        canvas.width=sp.cw;canvas.height=sp.ch;
+        if(bgImg){const img=new Image();img.src=bgImg;await new Promise(r=>{img.onload=r;img.onerror=r;});ctx.globalAlpha=bgOp;const sc=Math.max(sp.cw/img.width,sp.ch/img.height);ctx.drawImage(img,(sp.cw-img.width*sc)/2,(sp.ch-img.height*sc)/2,img.width*sc,img.height*sc);ctx.globalAlpha=1;}
+        else if(useGrad&&grad1&&grad2){const g=ctx.createLinearGradient(0,0,0,canvas.height);g.addColorStop(0,grad1);g.addColorStop(1,grad2);ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);}
+        else{ctx.fillStyle=ss.backgroundColor;ctx.fillRect(0,0,canvas.width,canvas.height);}
+
+        const isCart = ss.label === 'Cart';
+
+        if(!ss.screenshotImage){
+            const cw=sp.dw,ch=sp.dh,cx=(sp.cw-cw)/2,cy=sp.dy;
+            ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=4;ctx.setLineDash([20,15]);
+            roundRect(ctx,cx,cy,cw,ch,sp.cr);ctx.stroke();ctx.setLineDash([]);
+
+            if (isCart) {
+                // Cart-specific placeholder
+                ctx.fillStyle='rgba(255,255,255,0.15)';
+                roundRect(ctx,cx,cy,cw,ch,sp.cr); ctx.fill();
+
+                // Cart icon
+                ctx.fillStyle='rgba(255,255,255,0.5)';
+                ctx.font='bold 80px Arial';
+                ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.fillText('🛒', sp.cw/2, cy+ch/2 - 100);
+
+                // Main message
+                ctx.fillStyle='rgba(255,255,255,0.9)';
+                ctx.font='bold 32px Arial';
+                ctx.fillText('Cart requires manual upload', sp.cw/2, cy+ch/2 - 10);
+
+                // Sub message line 1
+                ctx.fillStyle='rgba(255,255,255,0.55)';
+                ctx.font='26px Arial';
+                ctx.fillText('Auto-capture not supported — cart requires', sp.cw/2, cy+ch/2 + 60);
+                ctx.fillText('an active session with items added.', sp.cw/2, cy+ch/2 + 100);
+
+                // Instruction
+                ctx.fillStyle='rgba(255,255,255,0.4)';
+                ctx.font='24px Arial';
+                ctx.fillText('Use + Upload in the library to add your cart screenshot.', sp.cw/2, cy+ch/2 + 160);
+            } else {
+                ctx.fillStyle='rgba(255,255,255,0.5)';
+                ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.font='bold 28px Arial';
+                ctx.fillText('Select from library',sp.cw/2,cy+ch/2);
+            }
+        }
+
+        const hFam=hFont||'system-ui,Arial,sans-serif',sFam=sFont||'system-ui,Arial,sans-serif';
+        const aH=ss.deviceType==='android'?60:hSize,aS=ss.deviceType==='android'?36:sSize;
+        ctx.fillStyle=ss.textColor;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font=`bold ${aH}px ${hFam}`;wrapText(ctx,applyCase(ss.headline),sp.cw/2,hY,sp.cw-hMg*2,hSp,aH*1.2);
+        ctx.font=`${aS}px ${sFam}`;wrapText(ctx,applyCase(ss.subheadline),sp.cw/2,sY,sp.cw-sMg*2,sSp,aS*1.2);
+
+        if(ss.screenshotImage){
+            const img=new Image();img.src=ss.screenshotImage;await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
+            const cw=sp.dw*ss.containerScale,ch=sp.dh*ss.containerScale;
+            const cx=(sp.cw-cw)/2+ss.containerX,cy=sp.dy+ss.containerY;
+            if(shadow){const r=parseInt(sColor.slice(1,3),16),g=parseInt(sColor.slice(3,5),16),b=parseInt(sColor.slice(5,7),16);ctx.shadowColor=`rgba(${r},${g},${b},${sOp})`;ctx.shadowBlur=sBlur;ctx.shadowOffsetX=0;ctx.shadowOffsetY=sOffY;}
+            ctx.fillStyle='#fff';roundRect(ctx,cx,cy,cw,ch,sp.cr*ss.containerScale);ctx.fill();
+            ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+            ctx.save();roundRect(ctx,cx,cy,cw,ch,sp.cr*ss.containerScale);ctx.clip();
+            const sc=cw/img.width,iw=img.width*sc,ih=img.height*sc;
+            ctx.drawImage(img,cx+(cw-iw)/2+shotX,cy+shotY,iw,ih);ctx.restore();
+            if(showHnds){const hs=30,ho=10;ctx.fillStyle=canDragShot?'rgba(16,185,129,0.8)':'rgba(99,102,241,0.8)';ctx.strokeStyle='#fff';ctx.lineWidth=3;[[cx+ho,cy+ho],[cx+cw-ho,cy+ho],[cx+ho,cy+ch-ho],[cx+cw-ho,cy+ch-ho]].forEach(([hx,hy])=>{ctx.beginPath();ctx.arc(hx,hy,hs/2,0,Math.PI*2);ctx.fill();ctx.stroke();});}
+        }
+        if(guides){ctx.setLineDash([10,5]);ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sp.cw/2,0);ctx.lineTo(sp.cw/2,sp.ch);ctx.stroke();ctx.beginPath();ctx.moveTo(0,sp.ch/2);ctx.lineTo(sp.cw,sp.ch/2);ctx.stroke();[1,2].forEach(n=>{ctx.beginPath();ctx.moveTo(sp.cw/3*n,0);ctx.lineTo(sp.cw/3*n,sp.ch);ctx.stroke();ctx.beginPath();ctx.moveTo(0,sp.ch/3*n);ctx.lineTo(sp.cw,sp.ch/3*n);ctx.stroke();});ctx.setLineDash([]);}
+    };
+
+    useEffect(()=>{if(canvasRef.current)renderToCanvas(cur,canvasRef.current);},[cur,hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,hFont,sFont,useGrad,grad1,grad2,bgImg,bgOp,showHnds,shotX,shotY,canDragShot,shadow,sBlur,sOp,sOffY,sColor,guides,tCase]);
+    useEffect(()=>{if(canvasRef.current)renderToCanvas(cur,canvasRef.current);},[]);
+    useEffect(()=>{
+        const onKey = e => {
+            if(!cur.screenshotImage) return;
+            const tag = document.activeElement?.tagName;
+            if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;
+            const step = e.shiftKey ? 20 : 5;
+            if(e.key==='ArrowUp')   { e.preventDefault(); setShotY(v=>v-step); }
+            if(e.key==='ArrowDown') { e.preventDefault(); setShotY(v=>v+step); }
+            if(e.key==='ArrowLeft') { e.preventDefault(); setShotX(v=>v-step); }
+            if(e.key==='ArrowRight'){ e.preventDefault(); setShotX(v=>v+step); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    },[cur.screenshotImage]);
+
+    const onDblClick=e=>{if(!canvasRef.current||!cur.screenshotImage)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){setCanDragShot(v=>!v);}};
+    const [openTextAccordion, setOpenTextAccordion] = useState(0);
+    const onMouseDown=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;if(Math.abs(y-hY)<50&&x>100&&x<spec.cw-100){setDragHl(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(Math.abs(y-sY)<50&&x>100&&x<spec.cw-100){setDragSub(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(!cur.screenshotImage)return;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;const ho=10,hs=30;for(const[hx,hy]of[[cx+ho,cy+ho],[cx+cw-ho,cy+ho],[cx+ho,cy+ch-ho],[cx+cw-ho,cy+ch-ho]]){if(Math.hypot(x-hx,y-hy)<=hs/2){setDragHnd(true);setDragStart({x,y,scale:cur.containerScale});return;}}if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){if(canDragShot)setDragShot(true);else setDragCont(true);setDragStart({x,y});}};
+    const onMouseMove=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;if(cur.screenshotImage&&!dragHl&&!dragSub&&!dragCont&&!dragHnd&&!dragShot){const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;setShowHnds(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch);}if(dragHl)setHY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragSub)setSY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragHnd){const cCx=spec.cw/2+cur.containerX,cCy=spec.dy+(spec.dh*dragStart.scale)/2+cur.containerY;const sd=Math.hypot(dragStart.x-cCx,dragStart.y-cCy),cd=Math.hypot(x-cCx,y-cCy);updCur({containerScale:Math.max(0.5,Math.min(2,dragStart.scale*cd/sd))});}else if(dragShot){setShotX(v=>v+(x-dragStart.x));setShotY(v=>v+(y-dragStart.y));setDragStart({x,y});}else if(dragCont){updCur({containerX:cur.containerX+(x-dragStart.x),containerY:cur.containerY+(y-dragStart.y)});setDragStart({x,y});}};
+    const onMouseUp=()=>{setDragHl(false);setDragSub(false);setDragCont(false);setDragHnd(false);setDragShot(false);};
+    const onMouseLeave=()=>{setShowHnds(false);onMouseUp();};
+
+    const [selectedSlots, setSelectedSlots] = useState(new Set([1,2,3,4,5]));
+    const toggleSlot = id => setSelectedSlots(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    const toggleAllSlots = () => setSelectedSlots(prev => prev.size === screenshots.length ? new Set() : new Set(screenshots.map(s=>s.id)));
+    const addSlot = () => {
+        setScreenshots(ss => {
+            const newId = Math.max(...ss.map(s=>s.id)) + 1;
+            const newSlot = { id:newId, label:`Slot ${newId}`, deviceType:'iphone', headline:'NEW SLIDE', subheadline:'ADD YOUR CONTENT HERE', backgroundColor:'#000000', textColor:'#ffffff', screenshotImage:null, containerScale:1, containerX:0, containerY:0 };
+            setSelectedSlots(prev => new Set([...prev, newId]));
+            return [...ss, newSlot];
+        });
+    };
+    const removeSlot = id => {
+        setScreenshots(ss => { if(ss.length<=1) return ss; return ss.filter(s=>s.id!==id); });
+        setSelectedSlots(prev => { const next=new Set(prev); next.delete(id); return next; });
+        setActiveIdx(i => Math.max(0, i-1));
+    };
+
+    const renderToBlob=async ss=>new Promise(async resolve=>{const c=document.createElement('canvas');await renderToCanvas(ss,c);c.toBlob(resolve,'image/png');});
+    const download=async ss=>{const blob=await renderToBlob(ss);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`app-listing-${ss.id}-${ss.label||ss.id}-${ss.deviceType}.png`;a.click();};
+    const zipName = (suffix='') => { const base=(appName.trim()||appId||'tapcart').replace(/[^a-z0-9]/gi,'-').toLowerCase(); return `${base}-screenshots${suffix}.zip`; };
+    const downloadAll=async()=>{
+        const zip=new JSZip();
+        for(const ss of screenshots){if(!ss.screenshotImage||!selectedSlots.has(ss.id))continue;const blob=await renderToBlob(ss);zip.file(`${ss.id}-${ss.label||ss.id}-iphone.png`,blob);}
+        const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(out);a.download=zipName();a.click();
+    };
+    const downloadBoth=async()=>{
+        const zip=new JSZip();
+        for(const p of['iphone','android'])for(const ss of screenshots){if(!ss.screenshotImage||!selectedSlots.has(ss.id))continue;const blob=await renderToBlob({...ss,deviceType:p});zip.file(`${ss.id}-${ss.label||ss.id}-${p}.png`,blob);}
+        const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(out);a.download=zipName('-ios-android');a.click();
+    };
+
+    const hasBrandColors = brandKit && (brandKit.backgroundColor || brandKit.textColor || brandKit.fontFamily);
+
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col" style={{fontFamily:'system-ui,-apple-system,sans-serif'}}>
+
+            {/* Top bar */}
+            <div className="px-5 py-2.5 flex items-center justify-between flex-shrink-0" style={{background:"#1B191B"}}>
+                <div className="flex items-center gap-3">
+                    <span className="font-bold text-white text-base tracking-[0.13em] uppercase">Screenshot Generator</span>
+                    <span className="text-[9px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded-full font-medium">v1.6</span>
+                </div>
+                <div className="flex gap-2">
+                    <Btn onClick={saveProject} variant="ghost">💾 Save</Btn>
+                    <Btn onClick={()=>projectLoadRef.current?.click()} variant="ghost">📂 Load</Btn>
+                    <input ref={projectLoadRef} type="file" accept=".json" onChange={loadProject} className="hidden"/>
+                </div>
+            </div>
+
+            <div className="flex flex-1 overflow-hidden" style={{height:'calc(100vh - 52px)'}}>
+
+                {/* ── Left sidebar ── */}
+                <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+                    <div className="p-4 border-b border-gray-100">
+                        <span className="section-label">Tapcart App ID</span>
+                        <div className="flex gap-2">
+                            <input type="text" value={appId} onChange={e=>setAppId(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchApp()}
+                                placeholder="e.g. mLMFK4fI6j"
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white"/>
+                            <Btn onClick={fetchApp} disabled={loadingApp||capturing||!appId.trim()} variant="primary">{loadingApp?'Loading…':capturing?'Capturing…':'Load'}</Btn>
+                        </div>
+
+                        <div className="mt-2">
+                            <span className="section-label">App Name <span className="normal-case font-normal text-gray-400">(used in export filename)</span></span>
+                            <input type="text" value={appName} onChange={e=>setAppName(e.target.value)}
+                                placeholder="e.g. NopokoShop"
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white text-gray-700"/>
+                        </div>
+                        {brandKit && (
+                            <div className="mt-3 rounded-xl border border-gray-200 overflow-hidden">
+                                <div className="px-3 py-2 bg-gray-50">
+                                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">Brand Kit</span>
+                                </div>
+                                {hasBrandColors ? (
+                                    <div className="px-3 py-2 space-y-2">
+                                        {brandKit.backgroundColor && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0" style={{background:brandKit.backgroundColor}}/>
+                                                <div>
+                                                    <div className="text-[9px] text-gray-400">Brand Color</div>
+                                                    <div className="text-[10px] font-mono font-medium text-gray-700">{brandKit.backgroundColor}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {brandKit.textColor && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0" style={{background:brandKit.textColor}}/>
+                                                <div>
+                                                    <div className="text-[9px] text-gray-400">Button Text</div>
+                                                    <div className="text-[10px] font-mono font-medium text-gray-700">{brandKit.textColor}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {brandKit.fontFamily && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-500">Aa</div>
+                                                <div>
+                                                    <div className="text-[9px] text-gray-400">Font</div>
+                                                    <div className="text-[10px] font-medium text-gray-700">{brandKit.fontRaw||brandKit.fontFamily}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="px-3 py-2">
+                                        <p className="text-[10px] text-gray-400">No brand colors found in API response.</p>
+                                    </div>
+                                )}
+                                {brandKit.allColors && Object.keys(brandKit.allColors).length > 0 && (
+                                    <SuggestColors allColors={brandKit.allColors} onApplyBg={hex=>{updAll({backgroundColor:hex});setUseGrad(false);setBgImg(null);}} onApplyText={hex=>updAll({textColor:hex})} onApplyPair={(bg,tx)=>{updAll({backgroundColor:bg,textColor:tx});setUseGrad(false);setBgImg(null);}}/>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Screenshot library */}
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="section-label mb-0">Screenshot Library</span>
+                                <button onClick={()=>libUploadRef.current?.click()}
+                                    className="text-[10px] font-semibold text-gray-600 hover:text-gray-800 px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200">
+                                    + Upload
+                                </button>
+                            </div>
+                            <input ref={libUploadRef} type="file" accept="image/*" multiple onChange={uploadLibImages} className="hidden"/>
+                            {capturing ? (
+                                <div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[1,2,3,4].map(i => (
+                                            <div key={i} className="rounded-lg overflow-hidden" style={{aspectRatio:'9/19.5'}}>
+                                                <div className="w-full h-full bg-gray-100 animate-pulse" style={{animationDelay:`${i*150}ms`}}/>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1.5 mt-4">
+                                        <div className="flex gap-1">
+                                            {[0,1,2].map(i=>(
+                                                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#3f1efb] animate-bounce" style={{animationDelay:`${i*150}ms`}}/>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-[#3f1efb] font-semibold animate-pulse">{capProg || 'Capturing screenshots…'}</p>
+                                    </div>
+                                </div>
+                            ) : library.length === 0 ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-xs text-gray-300 text-center leading-relaxed">No screenshots yet.<br/>Capture or upload to get started.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {library.map(item => (
+                                            <LibThumb key={item.id} item={item}
+                                                inUse={usedUrls.has(item.dataUrl)}
+                                                isSelected={selLibId===item.id&&cur.screenshotImage===item.dataUrl}
+                                                onSelect={()=>assignToSlot(item)}
+                                                onDelete={()=>setLibrary(lib=>lib.filter(l=>l.id!==item.id))}/>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 text-center mt-3">Tap to assign to <span className="font-semibold text-[#3f1efb]">{cur.label || `Slot ${activeIdx+1}`}</span></p>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Capture controls */}
+                        <div className="px-4 pb-4 pt-2 border-t border-gray-100 flex-shrink-0">
+                            {appLinks ? (
+                                <div className="space-y-2">
+                                    {collections.length > 0 && (
+                                        <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 space-y-2">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                <span className="text-[9px] font-bold text-[#3f1efb] uppercase tracking-wide">Override screenshot targets</span>
+                                            </div>
+                                            <SearchSelect label="Collection (PLP)" items={collections} selected={selColl} onSelect={setSelColl}
+                                                query={collQ} onQueryChange={onCollQChange} searching={searchingC} displayKey="title" valueKey="handle"/>
+                                            <SearchSelect label="Product (PDP)" items={products} selected={selProd} onSelect={setSelProd}
+                                                query={prodQ} onQueryChange={onProdQChange} searching={searchingP} displayKey="title" valueKey="id"/>
+                                        </div>
+                                    )}
+                                    {library.length === 0 ? (
+                                        <Btn onClick={captureScreenshots} disabled={capturing} variant="primary" className="w-full">
+                                            {capturing ? '⏳ Capturing…' : '📸 Capture'}
+                                        </Btn>
+                                    ) : (
+                                        <Btn onClick={recaptureScreenshots} disabled={capturing} variant="danger" className="w-full">
+                                            {capturing ? '⏳ Capturing…' : '🔄 Re-capture'}
+                                        </Btn>
+                                    )}
+                                    {capProg && <p className="text-[10px] text-[#3f1efb] animate-pulse">{capProg}</p>}
+                                    <div className="rounded-lg bg-[#f0effe] border border-[#c4b9fc] px-3 py-2 text-[10px] text-[#2e14d5] leading-relaxed space-y-1">
+                                        <div>🛒 <span className="font-semibold">Cart (Slot 5):</span> Must be uploaded manually via + Upload above.</div>
+                                        <div className="text-gray-400 border-t border-[#ddd8fe] pt-1">⚡ Microlink free tier: <span className="font-semibold">50 req/day per IP</span>. Each capture uses 4 requests.</div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-gray-400">Load an App ID above to capture.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Right sidebar ── */}
+                <div className="w-64 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 order-3">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div>
+                            <span className="section-label">Active Slot</span>
+                            <div className="flex gap-1 flex-wrap mb-3">
+                                {screenshots.map((ss,i) => (
+                                    <button key={ss.id} onClick={()=>setActiveIdx(i)}
+                                        className={`px-2 h-9 rounded-lg text-[10px] font-semibold transition-colors ${activeIdx===i?'bg-[#3f1efb] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                        {ss.label || ss.id}{ss.screenshotImage?' ✓':''}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="rounded-xl bg-[#f0effe] border border-[#c4b9fc] px-3 py-2.5 mt-1">
+                                <span className="section-label text-[#3f1efb] mb-1.5">Device</span>
+                                <select value={cur.deviceType} onChange={e=>updCur({deviceType:e.target.value})}
+                                    className="w-full px-2.5 py-2 border border-[#c4b9fc] rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb] font-semibold text-[#3f1efb]">
+                                    <option value="iphone">📱 iPhone</option>
+                                    <option value="android">🤖 Android</option>
+                                </select>
+                            </div>
+                            {cur.screenshotImage && (
+                                <div className="flex gap-1.5 mt-2">
+                                    <button onClick={()=>{ setShotX(0); setShotY(0); }}
+                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+                                        Reset crop
+                                    </button>
+                                    <button onClick={()=>{ updCur({ containerX: 0, containerY: 0, containerScale: 1 }); }}
+                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                                        Reset container
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <Accordion title="Background" defaultOpen={false}>
+                            <div>
+                                <span className="section-label">Type</span>
+                                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                                    {[['Solid',!useGrad&&!bgImg],['Gradient',useGrad],['Image',!!bgImg]].map(([label,active],i)=>(
+                                        <button key={label} onClick={()=>{if(i===0){setUseGrad(false);setBgImg(null);}else if(i===1){setUseGrad(true);setBgImg(null);}else bgImgRef.current?.click();}}
+                                            className={`flex-1 py-1 rounded-md text-[10px] font-semibold transition-colors ${active?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input ref={bgImgRef} type="file" accept="image/*" onChange={uploadBgImage} className="hidden"/>
+                            </div>
+                            {!useGrad&&!bgImg&&<ColorInput label="Color" value={cur.backgroundColor} onChange={v=>updCur({backgroundColor:v})}/>}
+                            {useGrad&&(<div className="grid grid-cols-2 gap-2"><ColorInput label="Start" value={grad1} onChange={setGrad1}/><ColorInput label="End" value={grad2} onChange={setGrad2}/></div>)}
+                            {bgImg&&<div><Slider label="Opacity" value={Math.round(bgOp*100)} onChange={v=>setBgOp(v/100)} min={10} max={100} unit="%"/><button onClick={()=>setBgImg(null)} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove image</button></div>}
+                            <button onClick={()=>{updAll({backgroundColor:cur.backgroundColor,textColor:cur.textColor});}}
+                                className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">
+                                Apply colors to all slots
+                            </button>
+                        </Accordion>
+
+                        <Accordion title="Text" forceOpen={openTextAccordion}>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <span className="section-label">Language</span>
+                                    <select value={lang} onChange={e=>changeLang(e.target.value)}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb]">
+                                        <option value="en">English</option><option value="es">Español</option>
+                                        <option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span className="section-label">Case</span>
+                                    <select value={tCase} onChange={e=>setTCase(e.target.value)}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb]">
+                                        <option value="uppercase">UPPER</option><option value="lowercase">lower</option>
+                                        <option value="capitalize">Title</option><option value="none">None</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <ColorInput label="Text color" value={cur.textColor} onChange={v=>updCur({textColor:v})}/>
+                            <input type="text" value={cur.headline} onChange={e=>updCur({headline:e.target.value})}
+                                placeholder="Headline"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3f1efb]"/>
+                            <textarea value={cur.subheadline} onChange={e=>updCur({subheadline:e.target.value})}
+                                placeholder="Subheadline" rows={2}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] resize-none"/>
+                        </Accordion>
+
+                        <Accordion title="Typography">
+                            <div className="grid grid-cols-2 gap-2 mb-1">
+                                <div>
+                                    <span className="section-label">Headline font</span>
+                                    <input ref={hFontRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={e=>uploadFont(e,true)} className="hidden"/>
+                                    <button onClick={()=>hFontRef.current?.click()}
+                                        className="w-full px-2 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-semibold hover:bg-gray-200 truncate flex items-center gap-1">
+                                        <span className="text-gray-400">↑</span>{hFont ? hFontName : 'Upload…'}
+                                    </button>
+                                </div>
+                                <div>
+                                    <span className="section-label">Sub font</span>
+                                    <input ref={sFontRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={e=>uploadFont(e,false)} className="hidden"/>
+                                    <button onClick={()=>sFontRef.current?.click()}
+                                        className="w-full px-2 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-semibold hover:bg-gray-200 truncate flex items-center gap-1">
+                                        <span className="text-gray-400">↑</span>{sFont ? sFontName : 'Upload…'}
+                                    </button>
+                                </div>
+                            </div>
+                            <span className="section-label">Headline</span>
+                            {[{l:'Size',v:hSize,s:setHSize,min:10,max:120},{l:'Position Y',v:hY,s:setHY,min:30,max:2600},{l:'Letter spacing',v:hSp,s:setHSp,min:-10,max:50},{l:'Margin',v:hMg,s:setHMg,min:0,max:300}].map(({l,v,s,min,max})=>(
+                                <Slider key={l} label={l} value={v} onChange={s} min={min} max={max}/>
+                            ))}
+                            <span className="section-label mt-2">Subheadline</span>
+                            {[{l:'Size',v:sSize,s:setSSize,min:10,max:120},{l:'Position Y',v:sY,s:setSY,min:30,max:2600},{l:'Letter spacing',v:sSp,s:setSSp,min:-10,max:50},{l:'Margin',v:sMg,s:setSMg,min:0,max:300}].map(({l,v,s,min,max})=>(
+                                <Slider key={l} label={l} value={v} onChange={s} min={min} max={max}/>
+                            ))}
+                        </Accordion>
+
+                        <Accordion title="Drop Shadow">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <div onClick={()=>setShadow(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${shadow?'bg-[#3f1efb]':'bg-gray-200'}`}>
+                                    <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${shadow?'translate-x-4':'translate-x-0.5'}`}/>
+                                </div>
+                                <span className="text-xs text-gray-600">Enable shadow</span>
+                            </label>
+                            <div className={shadow?'':'opacity-40 pointer-events-none'}>
+                                <ColorInput label="Shadow color" value={sColor} onChange={setSColor}/>
+                                <Slider label="Blur" value={sBlur} onChange={setSBlur} min={0} max={100} unit=""/>
+                                <Slider label="Opacity" value={Math.round(sOp*100)} onChange={v=>setSOp(v/100)} min={0} max={100} unit="%"/>
+                                <Slider label="Offset Y" value={sOffY} onChange={setSOffY} min={0} max={100} unit=""/>
+                            </div>
+                        </Accordion>
+
+                        <Accordion title="Export">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="section-label mb-0">Include in download</span>
+                                    <button onClick={toggleAllSlots} className="text-[9px] font-semibold text-[#3f1efb] hover:text-[#2e14d5]">
+                                        {selectedSlots.size === screenshots.length ? 'Deselect all' : 'Select all'}
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {screenshots.map((ss,i) => {
+                                        const isSelected = selectedSlots.has(ss.id);
+                                        return (
+                                            <div key={ss.id} className="relative group">
+                                                <button onClick={()=>toggleSlot(ss.id)}
+                                                    className={`relative w-full rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-[#3f1efb] shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
+                                                    style={{aspectRatio:'1242/2688'}}>
+                                                    {ss.screenshotImage
+                                                        ? <img src={ss.screenshotImage} className="w-full h-full object-cover object-top"/>
+                                                        : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><span className="text-gray-300 text-[9px] font-bold text-center px-1">{ss.label||ss.id}</span></div>
+                                                    }
+                                                    <div className={`absolute inset-0 transition-opacity ${isSelected?'bg-[#3f1efb]/20':'bg-transparent'}`}/>
+                                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected?'bg-[#3f1efb] border-[#3f1efb]':'bg-white/80 border-gray-300'}`}>
+                                                        {isSelected && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                                    </div>
+                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 py-0.5 text-center text-white text-[7px] font-bold">{ss.label||ss.id}</div>
+                                                </button>
+                                                <button onClick={()=>removeSlot(ss.id)}
+                                                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-bold items-center justify-center hidden group-hover:flex shadow">×</button>
+                                            </div>
+                                        );
+                                    })}
+                                    <button onClick={addSlot}
+                                        className="rounded-lg border-2 border-dashed border-gray-300 hover:border-[#3f1efb] hover:bg-[#f0effe] flex items-center justify-center transition-colors text-gray-400 hover:text-[#3f1efb]"
+                                        style={{aspectRatio:'1242/2688'}}>
+                                        <span className="text-lg font-light">+</span>
+                                    </button>
+                                </div>
+                                <p className="text-[9px] text-gray-400 mb-3">{selectedSlots.size} of {screenshots.length} slots selected</p>
+                            </div>
+                            <Btn onClick={()=>download(cur)} disabled={!cur.screenshotImage} variant="default" className="w-full">Download this slot</Btn>
+                            <Btn onClick={downloadAll} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="ghost" className="w-full">Download selected (current device)</Btn>
+                            <Btn onClick={downloadBoth} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="primary" className="w-full">Download selected — iOS + Android</Btn>
+                        </Accordion>
+                    </div>
+                </div>
+
+                {/* ── Canvas ── */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 order-2">
+                    <div className="bg-white border-b border-gray-200 px-4 flex items-center justify-between flex-shrink-0">
+                        <div className="flex items-center">
+                            {screenshots.map((ss,i)=>(
+                                <button key={ss.id} onClick={()=>setActiveIdx(i)}
+                                    className={`px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${activeIdx===i?'border-[#3f1efb] text-[#3f1efb]':'border-transparent text-gray-400 hover:text-gray-700'}`}>
+                                    {ss.label || ss.id}{ss.screenshotImage?' ✓':''}
+                                </button>
+                            ))}
+                            <button onClick={addSlot} className="ml-1 px-2 py-2 text-gray-400 hover:text-[#3f1efb] text-base leading-none" title="Add slot">+</button>
+                        </div>
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none pr-1">
+                            <input type="checkbox" checked={guides} onChange={e=>setGuides(e.target.checked)} className="w-3.5 h-3.5 rounded"/>
+                            <span className="text-xs text-gray-500 font-medium">Guides</span>
+                        </label>
+                    </div>
+                    {canDragShot && cur.screenshotImage && (
+                        <div className="flex items-center justify-between px-4 py-2 bg-emerald-500 text-white text-xs font-semibold flex-shrink-0">
+                            <span>✂️ Crop mode — drag image or use ↑↓←→ keys to reposition. Double-click canvas to exit.</span>
+                            <button onClick={()=>setCanDragShot(false)} className="px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-[11px]">Exit</button>
+                        </div>
+                    )}
+                    {!canDragShot && cur.screenshotImage && (
+                        <div className="flex items-center px-4 py-1.5 bg-gray-700 text-gray-300 text-[10px] flex-shrink-0">
+                            <span>🖱️ Container mode — drag screenshot frame to reposition. Double-click frame to enter crop mode.</span>
+                        </div>
+                    )}
+                    <div className="flex-1 overflow-auto flex items-start justify-center p-10">
+                        <div>
+                            <canvas ref={canvasRef}
+                                onDoubleClick={onDblClick} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}
+                                style={{
+                                    width:`${spec.cw*PREVIEW_SCALE}px`,height:`${spec.ch*PREVIEW_SCALE}px`,
+                                    borderRadius:'20px',boxShadow:'0 25px 50px -12px rgba(0,0,0,0.25)',
+                                    cursor:dragHl||dragSub||dragCont||dragShot?'grabbing':dragHnd?'nwse-resize':canDragShot?'move':'default',
+                                }}/>
+                            <p className="text-[10px] text-gray-400 mt-3 text-center">{spec.cw}×{spec.ch}px · {cur.label || `Slot ${activeIdx+1}`} · drag to reposition · ↑↓ keys to crop (shift = larger steps)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
