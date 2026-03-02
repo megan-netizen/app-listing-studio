@@ -8,16 +8,18 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-        input[type=range] { accent-color: #6366f1; }
+        input[type=range] { accent-color: #3f1efb; }
         input[type=color] { cursor: pointer; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
         .section-label { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; display: block; }
     </style>
-</head>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"><style>body,button,input,select,textarea{font-family:'Inter',system-ui,sans-serif;}</style></head>
 <body class="bg-gray-100">
 <div id="root"></div>
 <script type="text/babel">
@@ -30,45 +32,79 @@ const Icon = ({ d, size = 14 }) => (
 );
 
 const TRANSLATIONS = {
+    // Order: Home, Collections, PLP, PDP, Account, Cart, Notifs
     en: [
-        { headline: 'EXCLUSIVE ACCESS',  subheadline: 'EVERYTHING YOU LOVE IN ONE PLACE' },
-        { headline: 'EASY BROWSING',     subheadline: 'BROWSE ALL OF OUR COLLECTIONS & CONTENT' },
-        { headline: 'EXPLORE PRODUCTS',  subheadline: 'SHOP YOUR FAVORITE PRODUCTS' },
-        { headline: 'NEW ARRIVALS',      subheadline: 'EARLY ACCESS TO SIGNATURE PRODUCTS' },
-        { headline: 'SECURE CHECKOUT',   subheadline: 'FAST AND SECURE CHECKOUT' },
+        { headline: 'EXCLUSIVE ACCESS',   subheadline: 'EVERYTHING YOU LOVE IN ONE PLACE' },
+        { headline: 'SHOP COLLECTIONS',   subheadline: 'BROWSE ALL OF OUR COLLECTIONS' },
+        { headline: 'EASY BROWSING',      subheadline: 'BROWSE ALL OF OUR COLLECTIONS & CONTENT' },
+        { headline: 'EXPLORE PRODUCTS',   subheadline: 'SHOP YOUR FAVORITE PRODUCTS' },
+        { headline: 'OWN YOUR EXPERIENCE',subheadline: 'TRACK ORDERS. MANAGE YOUR ACCOUNT.' },
+        { headline: 'SECURE CHECKOUT',    subheadline: 'FAST AND SECURE CHECKOUT' },
+        { headline: 'STAY IN THE LOOP',   subheadline: 'GET NOTIFIED ON EXCLUSIVE DEALS' },
     ],
     es: [
         { headline: 'ACCESO EXCLUSIVO',   subheadline: 'Todo lo que amas en un solo lugar' },
+        { headline: 'COLECCIONES',        subheadline: 'Explora todas nuestras colecciones' },
         { headline: 'NAVEGACIÓN FÁCIL',   subheadline: 'Explora todas nuestras colecciones y contenido' },
         { headline: 'DESCUBRE PRODUCTOS', subheadline: 'Compra tus productos favoritos' },
-        { headline: 'LO NUEVO',           subheadline: 'Acceso anticipado a productos exclusivos' },
+        { headline: 'TU EXPERIENCIA',     subheadline: 'Rastrea pedidos. Gestiona tu cuenta.' },
         { headline: 'PAGO SEGURO',        subheadline: 'Pago rápido y protegido' },
+        { headline: 'MANTENTE INFORMADO', subheadline: 'Recibe notificaciones de ofertas exclusivas' },
     ],
     fr: [
         { headline: 'ACCÈS EXCLUSIF',        subheadline: 'Tout ce que vous aimez au même endroit' },
+        { headline: 'NOS COLLECTIONS',       subheadline: 'Parcourez toutes nos collections' },
         { headline: 'NAVIGATION FLUIDE',     subheadline: 'Parcourez nos collections et contenus' },
         { headline: 'EXPLORER NOS PRODUITS', subheadline: 'Achetez vos articles favoris' },
-        { headline: 'NOUVEAUTÉS',            subheadline: 'Accès anticipé aux produits signatures' },
+        { headline: 'VOTRE ESPACE',          subheadline: 'Suivez vos commandes. Gérez votre compte.' },
         { headline: 'PAIEMENT SÉCURISÉ',     subheadline: 'Paiement rapide et sécurisé' },
+        { headline: 'RESTEZ INFORMÉ',        subheadline: 'Recevez des alertes sur les offres exclusives' },
     ],
     de: [
-        { headline: 'EXKLUSIVER ZUGANG',  subheadline: 'Alles was du liebst an einem Ort' },
-        { headline: 'EINFACHES BROWSEN',  subheadline: 'Entdecke alle unsere Kollektionen & Inhalte' },
-        { headline: 'PRODUKTE ENTDECKEN', subheadline: 'Shoppe deine Lieblingsprodukte' },
-        { headline: 'NEUHEITEN',          subheadline: 'Frühzeitiger Zugang zu exklusiven Produkten' },
-        { headline: 'SICHER BEZAHLEN',    subheadline: 'Schneller und sicherer Checkout' },
+        { headline: 'EXKLUSIVER ZUGANG',       subheadline: 'Alles was du liebst an einem Ort' },
+        { headline: 'KOLLEKTIONEN',            subheadline: 'Alle unsere Kollektionen entdecken' },
+        { headline: 'EINFACHES BROWSEN',       subheadline: 'Entdecke alle unsere Kollektionen & Inhalte' },
+        { headline: 'PRODUKTE ENTDECKEN',      subheadline: 'Shoppe deine Lieblingsprodukte' },
+        { headline: 'DEIN BEREICH',            subheadline: 'Bestellungen verfolgen. Konto verwalten.' },
+        { headline: 'SICHER BEZAHLEN',         subheadline: 'Schneller und sicherer Checkout' },
+        { headline: 'BLEIB AUF DEM LAUFENDEN', subheadline: 'Exklusive Angebote nie verpassen' },
     ],
     pt: [
         { headline: 'ACESSO EXCLUSIVO',  subheadline: 'Tudo o que você ama em um só lugar' },
+        { headline: 'COLEÇÕES',          subheadline: 'Explore todas as nossas coleções' },
         { headline: 'NAVEGAÇÃO FÁCIL',   subheadline: 'Explore todas as nossas coleções e conteúdo' },
         { headline: 'EXPLORE PRODUTOS',  subheadline: 'Compre seus produtos favoritos' },
-        { headline: 'NOVIDADES',         subheadline: 'Acesso antecipado a produtos exclusivos' },
+        { headline: 'SUA EXPERIÊNCIA',   subheadline: 'Rastreie pedidos. Gerencie sua conta.' },
         { headline: 'CHECKOUT SEGURO',   subheadline: 'Pagamento rápido e seguro' },
+        { headline: 'FIQUE POR DENTRO',  subheadline: 'Receba notificações de ofertas exclusivas' },
+    ],
+    it: [
+        { headline: 'ACCESSO ESCLUSIVO',    subheadline: 'Tutto ciò che ami in un unico posto' },
+        { headline: 'COLLEZIONI',           subheadline: 'Esplora tutte le nostre collezioni' },
+        { headline: 'NAVIGAZIONE SEMPLICE', subheadline: 'Esplora tutte le nostre collezioni e contenuti' },
+        { headline: 'SCOPRI I PRODOTTI',    subheadline: 'Acquista i tuoi prodotti preferiti' },
+        { headline: 'IL TUO SPAZIO',        subheadline: 'Traccia ordini. Gestisci il tuo account.' },
+        { headline: 'CHECKOUT SICURO',      subheadline: 'Pagamento veloce e sicuro' },
+        { headline: 'RESTA AGGIORNATO',     subheadline: 'Ricevi notifiche sulle offerte esclusive' },
+    ],
+    ar: [
+        { headline: 'وصول حصري',      subheadline: 'كل ما تحبه في مكان واحد' },
+        { headline: 'المجموعات',        subheadline: 'استعرض جميع مجموعاتنا' },
+        { headline: 'تصفح سهل',        subheadline: 'استعرض جميع مجموعاتنا ومحتوياتنا' },
+        { headline: 'اكتشف المنتجات',  subheadline: 'تسوق منتجاتك المفضلة' },
+        { headline: 'تجربتك الخاصة',   subheadline: 'تتبع الطلبات. أدر حسابك.' },
+        { headline: 'دفع آمن',          subheadline: 'دفع سريع وآمن' },
+        { headline: 'ابقَ على اطلاع',   subheadline: 'احصل على إشعارات بالعروض الحصرية' },
     ],
 };
 
-const DEFAULT_SHOTS = [1,2,3,4,5].map(id => ({
-    id, deviceType: 'iphone',
+// Slot order: Home, Collections, PLP, PDP, Account, Cart, Notifs
+const SLOT_LABELS = ['Home', 'Collections', 'PLP', 'PDP', 'Account', 'Cart', 'Notifs'];
+
+const DEFAULT_SHOTS = [1,2,3,4,5,6,7].map(id => ({
+    id,
+    label: SLOT_LABELS[id-1],
+    deviceType: 'iphone',
     headline: TRANSLATIONS.en[id-1].headline,
     subheadline: TRANSLATIONS.en[id-1].subheadline,
     backgroundColor: '#000000', textColor: '#ffffff',
@@ -78,6 +114,18 @@ const DEFAULT_SHOTS = [1,2,3,4,5].map(id => ({
 const DEVICE_SPECS = {
     iphone:  { cw: 1242, ch: 2688, dw: 1000, dh: 1991, cr: 60, dy: 440 },
     android: { cw: 1080, ch: 2280, dw: 900,  dh: 1813, cr: 40, dy: 350 },
+};
+
+const DEFAULT_CONFIG = {
+    useGrad:false,grad1:'#000000',grad2:'#333333',gradAngle:180,
+    bgImg:null,bgOp:1,bgBlur:0,bgOverlay:'#000000',bgOverlayOp:0,
+    noise:false,noiseInt:15,
+    shadow:false,sBlur:40,sOp:0.3,sOffX:0,sOffY:20,sColor:'#000000',
+    cornerR:-1,shotRotate:0,shotX:0,shotY:0,
+    hSize:68,sSize:40,hY:162,sY:232,hSp:0,sSp:0,hMg:50,sMg:50,
+    hFont:null,sFont:null,hFontName:'',sFontName:'',
+    hWeight:'bold',sWeight:'normal',tCase:'uppercase',
+    elements:[],
 };
 
 const extractBrandKit = (data) => {
@@ -114,7 +162,6 @@ const extractBrandKit = (data) => {
                 kit.fontSrc    = fp.src || null;
                 kit.fontWeight = fp.fontWeight || 400;
             }
-            // Collect ALL color fields from the theme object — dedupe globally by hex
             const seenHex = new Set();
             const colorEntries = [];
             const scanObj = (o, keyPrefix) => {
@@ -133,7 +180,6 @@ const extractBrandKit = (data) => {
                 }
             };
             scanObj(obj, '');
-            // Group by first segment of key name
             const groups = {};
             for (const entry of colorEntries) {
                 const seg = entry.key.replace(/^_/, '').split('_')[0] || 'other';
@@ -148,7 +194,6 @@ const extractBrandKit = (data) => {
     return kit;
 };
 
-// ── Reusable UI primitives ─────────────────────────────────────────────────
 const Accordion = ({ title, children, defaultOpen = false, forceOpen }) => {
     const [open, setOpen] = useState(defaultOpen);
     useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
@@ -174,7 +219,7 @@ const Slider = ({ label, value, onChange, min, max, unit = 'px' }) => (
             <div className="flex items-center gap-1">
                 <input type="number" min={min} max={max} value={value}
                     onChange={e => { const v=+e.target.value; if(!isNaN(v)) onChange(Math.min(max,Math.max(min,v))); }}
-                    className="w-14 px-1.5 py-0.5 border border-gray-200 rounded text-[10px] font-medium text-gray-700 tabular-nums text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"/>
+                    className="w-14 px-1.5 py-0.5 border border-gray-200 rounded text-[10px] font-medium text-gray-700 tabular-nums text-right focus:outline-none focus:ring-1 focus:ring-[#3f1efb]"/>
                 <span className="text-[10px] text-gray-400">{unit}</span>
             </div>
         </div>
@@ -196,10 +241,10 @@ const ColorInput = ({ label, value, onChange }) => (
 const Btn = ({ onClick, disabled, children, variant = 'default', className = '' }) => {
     const variants = {
         default:  'bg-gray-900 text-white hover:bg-gray-700',
-        primary:  'bg-indigo-600 text-white hover:bg-indigo-700',
+        primary:  'bg-[#3f1efb] text-white hover:bg-[#2e14d5]',
         danger:   'bg-red-500 text-white hover:bg-red-600',
         ghost:    'bg-gray-100 text-gray-700 hover:bg-gray-200',
-        orange:   'bg-orange-500 text-white hover:bg-orange-600',
+        orange:   'bg-[#3f1efb] text-white hover:bg-[#2e14d5]',
     };
     return (
         <button onClick={onClick} disabled={disabled}
@@ -211,21 +256,19 @@ const Btn = ({ onClick, disabled, children, variant = 'default', className = '' 
 
 const LibThumb = ({ item, inUse, isSelected, onSelect, onDelete }) => (
     <div onClick={onSelect}
-        className={`relative rounded-lg overflow-hidden cursor-pointer group transition-all border-2 ${isSelected ? 'border-indigo-500 shadow-lg' : 'border-transparent hover:border-indigo-300'}`}
+        className={`relative rounded-lg overflow-hidden cursor-pointer group transition-all border-2 ${isSelected ? 'border-[#3f1efb] shadow-lg' : 'border-transparent hover:border-[#8a76f8]'}`}
         style={{ aspectRatio: '390/844' }}>
         <img src={item.dataUrl} alt={item.label} className="w-full h-full object-cover" />
         <div className={`absolute inset-0 flex flex-col items-center justify-end pb-1.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             style={{ background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.7))' }}>
             <span className="text-white text-[8px] font-bold px-1 text-center leading-tight">{item.label}</span>
         </div>
-        {inUse && <div className="absolute top-1 right-1 bg-indigo-500 text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full">IN USE</div>}
+        {inUse && <div className="absolute top-1 right-1 bg-[#3f1efb] text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full">IN USE</div>}
         <button onClick={e => { e.stopPropagation(); onDelete(); }}
             className="absolute top-1 left-1 bg-black/60 text-white rounded-full w-4 h-4 text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
     </div>
 );
 
-
-// ── Color helpers ─────────────────────────────────────────────────────────────
 const getLuminance = hex => {
     try {
         const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
@@ -239,14 +282,11 @@ const friendlyKey = key => key.replace(/^_/,'').replace(/_/g,' ').replace(/\b\w/
 const GROUP_LABELS = {core:'Core',button:'Button',nav:'Navigation',tab:'Tab Bar',card:'Card',text:'Text',icon:'Icon',border:'Border',background:'Background',badge:'Badge',header:'Header',product:'Product',search:'Search',modal:'Modal',toast:'Toast',other:'Other'};
 
 const SuggestColors = ({ allColors, onApplyBg, onApplyText }) => {
-    const [open, setOpen]           = useState(false);
-    const [pickMode, setPickMode]   = useState(null);
-    const [selBg, setSelBg]         = useState(null);
-    const [selText, setSelText]     = useState(null);
-    const [hovered, setHovered]     = useState(null);
-
-    const contrast = (selBg && selText) ? getContrast(selBg, selText) : null;
-    const contrastOk = contrast && contrast >= 4.5;
+    const [open, setOpen]         = useState(false);
+    const [pickMode, setPickMode] = useState(null);
+    const [selBg, setSelBg]       = useState(null);
+    const [selText, setSelText]   = useState(null);
+    const [hovered, setHovered]   = useState(null);
 
     const handleSwatch = hex => {
         if (pickMode==='bg')        { setSelBg(hex);   setPickMode(null); }
@@ -259,8 +299,8 @@ const SuggestColors = ({ allColors, onApplyBg, onApplyText }) => {
     return (
         <div className="border-t border-gray-100">
             <button onClick={()=>setOpen(v=>!v)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-indigo-50 hover:bg-indigo-100 transition-colors">
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">✨ Suggest Colors</span>
+                className="w-full flex items-center justify-between px-3 py-2 bg-[#f0effe] hover:bg-[#e8e5fe] transition-colors">
+                <span className="text-[10px] font-bold text-[#3f1efb] uppercase tracking-wide">✨ Suggest Colors</span>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2.5" style={{transform:open?"rotate(180deg)":"rotate(0)",transition:"transform .18s"}}>
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
@@ -268,15 +308,14 @@ const SuggestColors = ({ allColors, onApplyBg, onApplyText }) => {
             {open && (
                 <div className="px-3 py-3 space-y-3 bg-white">
                     <p className="text-[9px] text-gray-400 leading-relaxed">Click swatches to build a color pair — BG first, then Text. Preview contrast and apply to all slots.</p>
-
                     <div className="flex flex-wrap gap-1.5">
                         <button onClick={()=>setPickMode(pickMode==="bg"?null:"bg")}
-                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="bg"?"bg-indigo-600 text-white border-indigo-600":"border-gray-300 text-gray-600 hover:border-indigo-400")}>
+                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="bg"?"bg-[#3f1efb] text-white border-[#3f1efb]":"border-gray-300 text-gray-600 hover:border-[#3f1efb]")}>
                             {selBg && <span className="w-2.5 h-2.5 rounded-full border border-black/20 inline-block flex-shrink-0" style={{background:selBg}}/>}
                             {selBg ? selBg : "BG color"}
                         </button>
                         <button onClick={()=>setPickMode(pickMode==="text"?null:"text")}
-                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="text"?"bg-indigo-600 text-white border-indigo-600":"border-gray-300 text-gray-600 hover:border-indigo-400")}>
+                            className={"flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors "+(pickMode==="text"?"bg-[#3f1efb] text-white border-[#3f1efb]":"border-gray-300 text-gray-600 hover:border-[#3f1efb]")}>
                             {selText && <span className="w-2.5 h-2.5 rounded-full border border-black/20 inline-block flex-shrink-0" style={{background:selText}}/>}
                             {selText ? selText : "Text color"}
                         </button>
@@ -284,64 +323,45 @@ const SuggestColors = ({ allColors, onApplyBg, onApplyText }) => {
                             <button onClick={()=>{setSelBg(null);setSelText(null);setPickMode(null);}} className="px-2 py-1 rounded-full text-[10px] text-gray-400 border border-gray-200 hover:bg-gray-100">✕</button>
                         )}
                     </div>
-
                     {pickMode && (
-                        <p className="text-[9px] text-indigo-500 font-semibold animate-pulse">
+                        <p className="text-[9px] text-[#3f1efb] font-semibold animate-pulse">
                             {pickMode==="bg" ? "👆 Click a swatch → Background" : "👆 Click a swatch → Text color"}
                         </p>
                     )}
-
                     {selBg && selText && (
                         <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                            <div className="px-3 py-3 flex items-center justify-between" style={{background:selBg}}>
-                                <div>
-                                    <div className="text-[13px] font-black" style={{color:selText}}>Headline Text</div>
-                                    <div className="text-[10px]" style={{color:selText,opacity:0.85}}>Subheadline text</div>
-                                </div>
-
+                            <div className="px-3 py-3" style={{background:selBg}}>
+                                <div className="text-[13px] font-black" style={{color:selText}}>Headline Text</div>
+                                <div className="text-[10px]" style={{color:selText,opacity:0.85}}>Subheadline text</div>
                             </div>
                             <div className="p-2">
                                 <button onClick={()=>{onApplyBg(selBg);onApplyText(selText);}}
-                                    className="w-full py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-colors">
+                                    className="w-full py-1.5 bg-[#3f1efb] text-white rounded-lg text-[10px] font-bold hover:bg-[#2e14d5] transition-colors">
                                     Apply Pair to All Slots
                                 </button>
                             </div>
                         </div>
                     )}
-
                     {selBg && !selText && (
-                        <button onClick={()=>onApplyBg(selBg)} className="w-full py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-colors">
+                        <button onClick={()=>onApplyBg(selBg)} className="w-full py-1.5 bg-[#3f1efb] text-white rounded-lg text-[10px] font-bold hover:bg-[#2e14d5] transition-colors">
                             Apply BG Only
                         </button>
                     )}
-
                     {Object.entries(allColors).map(([group, entries]) => {
                         const valid = entries.filter(e => isValidHex(e.hex));
                         if (!valid.length) return null;
                         return (
                             <div key={group}>
-                                <div className="text-[8px] font-extrabold text-gray-300 uppercase tracking-widest mb-1.5">
-                                    {GROUP_LABELS[group] || group}
-                                </div>
+                                <div className="text-[8px] font-extrabold text-gray-300 uppercase tracking-widest mb-1.5">{GROUP_LABELS[group] || group}</div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {valid.map(entry => {
-                                        const isBg   = selBg   === entry.hex;
-                                        const isTx   = selText === entry.hex;
-                                        const isHov  = hovered === entry.key;
+                                        const isBg=selBg===entry.hex, isTx=selText===entry.hex, isHov=hovered===entry.key;
                                         return (
                                             <div key={entry.key} style={{position:"relative",display:"inline-block"}}>
-                                                <button
-                                                    onClick={()=>handleSwatch(entry.hex)}
-                                                    onMouseEnter={()=>setHovered(entry.key)}
-                                                    onMouseLeave={()=>setHovered(null)}
-                                                    style={{
-                                                        background:entry.hex,
-                                                        outline:isBg?"2.5px solid #6366f1":isTx?"2.5px solid #a855f7":"none",
-                                                        outlineOffset:"2px"
-                                                    }}
+                                                <button onClick={()=>handleSwatch(entry.hex)} onMouseEnter={()=>setHovered(entry.key)} onMouseLeave={()=>setHovered(null)}
+                                                    style={{background:entry.hex,outline:isBg?"2.5px solid #6366f1":isTx?"2.5px solid #a855f7":"none",outlineOffset:"2px"}}
                                                     className={"w-8 h-8 rounded-lg border border-black/10 transition-transform "+((isBg||isTx||isHov)?"scale-110 shadow-md":"hover:scale-105")}
-                                                    title={friendlyKey(entry.key)+": "+entry.hex}
-                                                />
+                                                    title={friendlyKey(entry.key)+": "+entry.hex}/>
                                                 {(isBg||isTx) && (
                                                     <div style={{position:"absolute",top:"-4px",right:"-4px",width:"14px",height:"14px",borderRadius:"50%",background:isBg?"#6366f1":"#a855f7",color:"#fff",fontSize:"7px",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}>
                                                         {isBg?"B":"T"}
@@ -372,20 +392,109 @@ const SearchSelect = ({ label, items, selected, onSelect, query, onQueryChange, 
     <div className="space-y-1">
         <span className="section-label">{label}</span>
         <div className="relative">
-            <input type="text" value={query} onChange={e => onQueryChange(e.target.value)}
-                placeholder="Search…"
-                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 pr-6" />
+            <input type="text" value={query} onChange={e => onQueryChange(e.target.value)} placeholder="Search…"
+                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb] pr-6" />
             {searching
-                ? <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-indigo-400 animate-pulse">…</span>
+                ? <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#3f1efb] animate-pulse">…</span>
                 : query ? <button onClick={() => onQueryChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">×</button> : null}
         </div>
         <select value={selected} onChange={e => onSelect(e.target.value)}
-            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#3f1efb]">
             {items.length === 0 ? <option>No results</option>
                 : items.map(i => <option key={i[valueKey]} value={i[valueKey]}>{i[displayKey]}</option>)}
         </select>
     </div>
 );
+
+// ── Language helpers ───────────────────────────────────────────────────────────
+const LANG_FLAGS = { en:'🇺🇸', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', ar:'🇸🇦' };
+const LANG_NAMES = { en:'English', es:'Español', fr:'Français', de:'Deutsch', pt:'Português', it:'Italiano', ar:'العربية' };
+
+// ── Static picker data ────────────────────────────────────────────────────────
+const EMOJI_LIST = ['🔥','⭐','💫','✨','💥','🎉','🎊','❤️','💜','💙','💚','🖤','🤍','💛','🧡','💎','🏆','🥇','🥈','🥉','🚀','⚡','🌈','🌟','😊','😍','🤩','💪','🤝','👏','🙌','👍','✅','💯','🎯','🔑','💡','📱','💻','🛒','🛍️','👑','🌺','🌸','🎨','🍎','🍕','☕','🎵','🎸','🌍','🦋','💐','🌻','🍦','🧁','🎀','💬','📣','🏅','🎖️','🪄','🎁','🏷️','🚚','👆','🆕','🔔','⏰','🕐','📍','➡️','⬆️','⬇️','🔍','📸','🎬','🎙️'];
+
+const ICON_DATA = [
+  {n:'star',p:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',pop:true},
+  {n:'heart',p:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',pop:true},
+  {n:'home',p:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',pop:true},
+  {n:'search',p:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',pop:true},
+  {n:'settings',p:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',pop:true},
+  {n:'user',p:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',pop:true},
+  {n:'mail',p:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',pop:true},
+  {n:'phone',p:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.18 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',pop:true},
+  {n:'camera',p:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',pop:true},
+  {n:'image',p:'<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',pop:true},
+  {n:'video',p:'<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',pop:true},
+  {n:'music',p:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',pop:true},
+  {n:'play',p:'<polygon points="5 3 19 12 5 21 5 3"/>',pop:true},
+  {n:'pause',p:'<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',pop:true},
+  {n:'volume',p:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>',pop:true},
+  {n:'bell',p:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',pop:true},
+  {n:'calendar',p:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',pop:true},
+  {n:'clock',p:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',pop:true},
+  {n:'pin',p:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',pop:true},
+  {n:'send',p:'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',pop:true},
+  {n:'download',p:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',pop:true},
+  {n:'upload',p:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',pop:true},
+  {n:'share',p:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',pop:true},
+  {n:'link',p:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',pop:true},
+  {n:'cart',p:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',pop:false},
+  {n:'bag',p:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',pop:false},
+  {n:'tag',p:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',pop:false},
+  {n:'gift',p:'<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',pop:false},
+  {n:'truck',p:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',pop:false},
+  {n:'thumbs-up',p:'<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>',pop:false},
+  {n:'check',p:'<polyline points="20 6 9 17 4 12"/>',pop:false},
+  {n:'zap',p:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',pop:false},
+  {n:'arrow-right',p:'<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',pop:false},
+  {n:'plus',p:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',pop:false},
+  {n:'percent',p:'<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',pop:false},
+  {n:'dollar',p:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',pop:false},
+  {n:'grid',p:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',pop:false},
+  {n:'menu',p:'<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',pop:false},
+  {n:'sparkles',p:'<path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5L12 3z"/><path d="M5 3L5.75 5.25L8 6L5.75 6.75L5 9L4.25 6.75L2 6L4.25 5.25L5 3z"/><path d="M19 13L19.5 14.5L21 15L19.5 15.5L19 17L18.5 15.5L17 15L18.5 14.5L19 13z"/>',pop:false},
+  {n:'award',p:'<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>',pop:false},
+];
+
+// ── Position Presets ──────────────────────────────────────────────────────────
+// Each preset defines containerScale, containerX, containerY, shotRotate, cornerR, shadow settings
+const POSITION_PRESETS = [
+    { id:'centered',     name:'Centered',      icon:'□',  desc:'Device centered in frame',
+      vals:{containerScale:1, containerX:0, containerY:0, shotRotate:0} },
+    { id:'bleed-bottom', name:'Bleed Bottom',   icon:'⊓',  desc:'Device bleeds off bottom edge',
+      vals:{containerScale:1.15, containerX:0, containerY:180, shotRotate:0} },
+    { id:'bleed-top',    name:'Bleed Top',      icon:'⊔',  desc:'Device bleeds off top edge',
+      vals:{containerScale:1.15, containerX:0, containerY:-350, shotRotate:0} },
+    { id:'float-center', name:'Float Center',   icon:'◇',  desc:'Smaller device floating center',
+      vals:{containerScale:0.82, containerX:0, containerY:20, shotRotate:0} },
+    { id:'tilt-left',    name:'Tilt Left',      icon:'◁',  desc:'Device tilted left',
+      vals:{containerScale:0.95, containerX:-20, containerY:30, shotRotate:-8} },
+    { id:'tilt-right',   name:'Tilt Right',     icon:'▷',  desc:'Device tilted right',
+      vals:{containerScale:0.95, containerX:20, containerY:30, shotRotate:8} },
+    { id:'float-bottom', name:'Float Bottom',   icon:'▽',  desc:'Small device at bottom',
+      vals:{containerScale:0.75, containerX:0, containerY:250, shotRotate:0} },
+];
+
+// ── Layout Templates ─────────────────────────────────────────────────────────
+// Each template maps screen slots to position presets, creating varied layouts
+const LAYOUT_TEMPLATES = [
+    { id:'uniform',       name:'Uniform',         desc:'All screens centered',
+      presets:['centered','centered','centered','centered','centered','centered','centered'] },
+    { id:'staggered',     name:'Staggered',       desc:'Alternating tilts left and right',
+      presets:['tilt-left','tilt-right','tilt-left','tilt-right','tilt-left','tilt-right','tilt-left'] },
+    { id:'showcase',      name:'Showcase',        desc:'Hero centered, rest tilted',
+      presets:['centered','tilt-left','tilt-right','centered','tilt-left','tilt-right','centered'] },
+    { id:'editorial',     name:'Editorial',       desc:'Mixed angles & floats',
+      presets:['bleed-bottom','float-center','tilt-left','tilt-right','bleed-top','float-center','float-bottom'] },
+    { id:'immersive',     name:'Immersive',       desc:'Bleed edges for full impact',
+      presets:['bleed-bottom','bleed-top','bleed-bottom','bleed-top','bleed-bottom','bleed-top','bleed-bottom'] },
+    { id:'dynamic',       name:'Dynamic',         desc:'Every screen a different angle',
+      presets:['centered','tilt-left','bleed-top','bleed-bottom','float-center','tilt-right','float-bottom'] },
+    { id:'minimal',       name:'Minimal',         desc:'Small floating devices',
+      presets:['float-center','float-center','float-center','float-center','float-center','float-center','float-center'] },
+    { id:'bold',          name:'Bold',            desc:'Big bleeds with accent tilts',
+      presets:['bleed-bottom','tilt-left','bleed-bottom','tilt-right','bleed-bottom','tilt-left','bleed-bottom'] },
+];
 
 function App() {
     const [activeIdx, setActiveIdx]       = useState(0);
@@ -406,12 +515,19 @@ function App() {
     const [sSp, setSSp]                   = useState(0);
     const [hMg, setHMg]                   = useState(50);
     const [sMg, setSMg]                   = useState(50);
-    const PREVIEW_SCALE                   = 0.3;
+    const [previewScale, setPreviewScale] = useState(0.28);
+    const canvasContainerRef              = useRef(null);
     const [useGrad, setUseGrad]           = useState(false);
     const [grad1, setGrad1]               = useState('#000000');
     const [grad2, setGrad2]               = useState('#333333');
+    const [gradAngle, setGradAngle]       = useState(180);
     const [bgImg, setBgImg]               = useState(null);
     const [bgOp, setBgOp]                 = useState(1);
+    const [bgBlur, setBgBlur]             = useState(0);
+    const [bgOverlay, setBgOverlay]       = useState('#000000');
+    const [bgOverlayOp, setBgOverlayOp]   = useState(0);
+    const [noise, setNoise]               = useState(false);
+    const [noiseInt, setNoiseInt]         = useState(15);
 
     const [dragHl, setDragHl]             = useState(false);
     const [dragSub, setDragSub]           = useState(false);
@@ -427,13 +543,31 @@ function App() {
     const [shadow, setShadow]             = useState(false);
     const [sBlur, setSBlur]               = useState(40);
     const [sOp, setSOp]                   = useState(0.3);
+    const [sOffX, setSOffX]               = useState(0);
     const [sOffY, setSOffY]               = useState(20);
     const [sColor, setSColor]             = useState('#000000');
+    const [cornerR, setCornerR]           = useState(-1);
+    const [shotRotate, setShotRotate]     = useState(0);
+    const [elements, setElements]         = useState([]);
+    const [elemTab, setElemTab]           = useState('emoji');
+    const [iconTab, setIconTab]           = useState('popular');
+    const [elemSearch, setElemSearch]     = useState('');
+    const [hWeight, setHWeight]           = useState('bold');
+    const [sWeight, setSWeight]           = useState('normal');
+    const [settingsTab, setSettingsTab]   = useState('bg');
     const [guides, setGuides]             = useState(false);
     const [tCase, setTCase]               = useState('uppercase');
     const [lang, setLang]                 = useState('en');
+    const [langOpen, setLangOpen]         = useState(false);
+    const [selectedPreset, setSelectedPreset] = useState(null);
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [toast, setToast]               = useState(null);
+    const [dragElem, setDragElem]         = useState(null);
+    const [showAllPreview, setShowAllPreview] = useState(false);
+    const [allPreviews, setAllPreviews]   = useState([]);
 
     const [appId, setAppId]               = useState('');
+    const [appName, setAppName]           = useState('');
     const [loadingApp, setLoadingApp]     = useState(false);
     const [appLinks, setAppLinks]         = useState(null);
     const [capturing, setCapturing]       = useState(false);
@@ -446,20 +580,124 @@ function App() {
     const [prodQ, setProdQ]               = useState('');
     const [searchingC, setSearchingC]     = useState(false);
     const [searchingP, setSearchingP]     = useState(false);
-    const [capturingCart, setCapturingCart] = useState(false);
-    const [cartCapProg, setCartCapProg]   = useState('');
     const [brandKit, setBrandKit]         = useState(null);
 
-    const canvasRef     = useRef(null);
-    const hFontRef      = useRef(null);
-    const sFontRef      = useRef(null);
-    const bgImgRef      = useRef(null);
-    const libUploadRef  = useRef(null);
-    const cartUploadRef = useRef(null);
-    const projectLoadRef= useRef(null);
-    const shopifyRef    = useRef(null);
-    const collTimer     = useRef(null);
-    const prodTimer     = useRef(null);
+    const canvasRef      = useRef(null);
+    const hFontRef       = useRef(null);
+    const sFontRef       = useRef(null);
+    const bgImgRef       = useRef(null);
+    const elemImgRef     = useRef(null);
+    const libUploadRef   = useRef(null);
+    const projectLoadRef = useRef(null);
+    const shopifyRef     = useRef(null);
+    const collTimer      = useRef(null);
+    const prodTimer      = useRef(null);
+    const configsRef     = useRef(null);
+    const prevIdxRef     = useRef(0);
+
+    // Initialize per-screen configs
+    if (!configsRef.current) {
+        configsRef.current = {};
+        for (let i=0; i<DEFAULT_SHOTS.length; i++) configsRef.current[i] = {...DEFAULT_CONFIG, elements:[]};
+    }
+
+    // Read current state into a config object
+    const getCurrentConfig = () => ({
+        useGrad,grad1,grad2,gradAngle,bgImg,bgOp,bgBlur,bgOverlay,bgOverlayOp,
+        noise,noiseInt,shadow,sBlur,sOp,sOffX,sOffY,sColor,cornerR,shotRotate,shotX,shotY,
+        hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,hFont,sFont,hFontName,sFontName,
+        hWeight,sWeight,tCase,elements:[...elements],
+    });
+
+    // Apply a config object to state
+    const applyConfig = (cfg) => {
+        setUseGrad(cfg.useGrad); setGrad1(cfg.grad1); setGrad2(cfg.grad2); setGradAngle(cfg.gradAngle);
+        setBgImg(cfg.bgImg); setBgOp(cfg.bgOp); setBgBlur(cfg.bgBlur);
+        setBgOverlay(cfg.bgOverlay); setBgOverlayOp(cfg.bgOverlayOp);
+        setNoise(cfg.noise); setNoiseInt(cfg.noiseInt);
+        setShadow(cfg.shadow); setSBlur(cfg.sBlur); setSOp(cfg.sOp);
+        setSOffX(cfg.sOffX); setSOffY(cfg.sOffY); setSColor(cfg.sColor);
+        setCornerR(cfg.cornerR); setShotRotate(cfg.shotRotate);
+        setShotX(cfg.shotX); setShotY(cfg.shotY);
+        setHSize(cfg.hSize); setSSize(cfg.sSize); setHY(cfg.hY); setSY(cfg.sY);
+        setHSp(cfg.hSp); setSSp(cfg.sSp); setHMg(cfg.hMg); setSMg(cfg.sMg);
+        setHFont(cfg.hFont); setSFont(cfg.sFont); setHFontName(cfg.hFontName); setSFontName(cfg.sFontName);
+        setHWeight(cfg.hWeight); setSWeight(cfg.sWeight); setTCase(cfg.tCase);
+        setElements(cfg.elements ? [...cfg.elements] : []);
+    };
+
+    // Switch screens: save current config, load new one
+    const switchScreen = (newIdx) => {
+        configsRef.current[prevIdxRef.current] = getCurrentConfig();
+        const cfg = configsRef.current[newIdx] || {...DEFAULT_CONFIG, elements:[]};
+        applyConfig(cfg);
+        prevIdxRef.current = newIdx;
+        setActiveIdx(newIdx);
+    };
+
+    // Get saved config for a specific screen (for export)
+    const getConfigForScreen = (idx) => {
+        if (idx === activeIdx) return getCurrentConfig();
+        return configsRef.current[idx] || {...DEFAULT_CONFIG, elements:[]};
+    };
+
+    // Apply current settings to ALL screens
+    const applyToAllScreens = () => {
+        const cfg = getCurrentConfig();
+        for (let i=0; i<screenshots.length; i++) {
+            configsRef.current[i] = {...cfg, elements: cfg.elements.map(e=>({...e}))};
+        }
+    };
+
+    const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2200);
+    };
+
+    const applyPreset = (preset) => {
+        const {containerScale, containerX, containerY, shotRotate: rot} = preset.vals;
+        // Apply to current screen's per-shot data
+        updCur({containerScale, containerX, containerY});
+        setShotRotate(rot);
+        setSelectedPreset(preset.id);
+    };
+
+    const applyPresetToAll = (preset) => {
+        const {containerScale, containerX, containerY, shotRotate: rot} = preset.vals;
+        setScreenshots(ss => ss.map(s => ({...s, containerScale, containerX, containerY})));
+        setShotRotate(rot);
+        // Also update all saved configs
+        for (let i=0; i<screenshots.length; i++) {
+            if (configsRef.current[i]) configsRef.current[i].shotRotate = rot;
+        }
+        setSelectedPreset(preset.id);
+        showToast('Position preset applied to all screens');
+    };
+
+    const applyTemplate = (tpl) => {
+        // Apply a layout template: each screen gets a different position preset
+        const presetMap = {};
+        POSITION_PRESETS.forEach(p => { presetMap[p.id] = p.vals; });
+        setScreenshots(ss => ss.map((s, i) => {
+            const presetId = tpl.presets[i] || 'centered';
+            const vals = presetMap[presetId] || presetMap['centered'];
+            return {...s, containerScale: vals.containerScale, containerX: vals.containerX, containerY: vals.containerY};
+        }));
+        // Update configs for each screen
+        for (let i = 0; i < screenshots.length; i++) {
+            const presetId = tpl.presets[i] || 'centered';
+            const vals = presetMap[presetId] || presetMap['centered'];
+            if (!configsRef.current[i]) configsRef.current[i] = {...DEFAULT_CONFIG};
+            configsRef.current[i].shotRotate = vals.shotRotate;
+        }
+        // Set rotation for the currently active screen
+        const activePresetId = tpl.presets[activeIdx] || 'centered';
+        const activeVals = presetMap[activePresetId] || presetMap['centered'];
+        setShotRotate(activeVals.shotRotate);
+        setSelectedTemplate(tpl.id);
+        setSelectedPreset(null);
+        showToast(`"${tpl.name}" layout applied to all screens`);
+    };
 
     const cur  = screenshots[activeIdx];
     const spec = DEVICE_SPECS[cur.deviceType];
@@ -504,11 +742,17 @@ function App() {
                 }
                 setHFont(name); setHFontName(`${kit.fontRaw||name}`);
                 setSFont(name); setSFontName(`${kit.fontRaw||name}`);
+                // Apply font to ALL screen configs on initial brand kit load
+                for (let i = 0; i < DEFAULT_SHOTS.length; i++) {
+                    if (!configsRef.current[i]) configsRef.current[i] = {...DEFAULT_CONFIG, elements:[]};
+                    configsRef.current[i].hFont = name;
+                    configsRef.current[i].sFont = name;
+                    configsRef.current[i].hFontName = kit.fontRaw||name;
+                    configsRef.current[i].sFontName = kit.fontRaw||name;
+                }
             } catch(e) { console.warn('[BrandKit] font failed', e); }
         }
     };
-
-    const applyBrandKit = async () => applyBrandKitData(brandKit);
 
     const addToLib = (dataUrl, label) => {
         setLibCounter(n => {
@@ -548,12 +792,8 @@ function App() {
                     const priority = ['new-arrivals','new_arrivals','newarrivals','best-sellers','best_sellers','bestsellers','featured','new','sale'];
                     const preferred = cols.find(c => priority.some(p => c.handle.toLowerCase().includes(p) || c.title.toLowerCase().replace(/\s+/g,'-').includes(p)));
                     const chosen = preferred ? preferred.handle : cols[0].handle;
-                    setSelColl(chosen);
-                    return chosen;
-                } else {
-                    setSelColl(cols[0].handle);
-                    return cols[0].handle;
-                }
+                    setSelColl(chosen); return chosen;
+                } else { setSelColl(cols[0].handle); return cols[0].handle; }
             }
         } catch(e) { console.warn(e); }
         finally { setSearchingC(false); }
@@ -578,31 +818,93 @@ function App() {
 
     const fetchApp = async () => {
         if (!appId.trim()) return;
-        setLoadingApp(true); setAppLinks(null); setBrandKit(null);
+        setLoadingApp(true); setAppLinks(null); setBrandKit(null); setAppName('');
         setCollections([]); setProducts([]); setSelColl(''); setSelProd(''); setCollQ(''); setProdQ('');
         try {
             const res = await fetch(`https://api.tapcart.com/mobile-native/${appId}`);
             if (!res.ok) throw new Error();
             const data = await res.json();
+            const resolvedName = data.app?.title || appId;
+            setAppName(resolvedName);
+            console.log('[Tapcart] App name resolved to:', resolvedName);
             const routes=data.config?.routes||{}, screens=data.screens||{};
             const shopify=data.config?.settings?.environment?.platform?.shopify;
-            // Log all available routes for debugging
             console.log('[Tapcart] Available routes:', routes);
             console.log('[Tapcart] All screen keys:', Object.keys(screens));
-            // Try common account route key variants
             const accountRouteKey = routes.account || routes.profile || routes.myAccount || routes.user || routes.settings || null;
-            const links = {
-                home:    routes.home    ? screens[routes.home]?.url    : null,
-                pdpBase: routes.pdp     ? screens[routes.pdp]?.url     : null,
-                plpBase: routes.plp     ? screens[routes.plp]?.url     : null,
-                cart:    routes.cart    ? screens[routes.cart]?.url    : null,
-                account: accountRouteKey ? screens[accountRouteKey]?.url : null,
+            // Helper: extract URL from a screen object (tries multiple known properties)
+            const getScreenUrl = (screenObj) => {
+                if (!screenObj) return null;
+                return screenObj.url || screenObj.webUrl || screenObj.uri || screenObj.href || screenObj.source || null;
             };
+            // Helper: resolve a route key to a URL
+            const resolveRoute = (routeKey) => {
+                const screenKey = routes[routeKey];
+                if (screenKey && screens[screenKey]) return getScreenUrl(screens[screenKey]);
+                // If route key is defined (even empty ""), try matching screen by key containing the route name
+                if (routeKey in routes) {
+                    const match = Object.entries(screens).find(([k,v]) => k.toLowerCase().includes(routeKey.replace(/-/g,'')) && getScreenUrl(v));
+                    if (match) return getScreenUrl(match[1]);
+                }
+                return null;
+            };
+            // Derive store base URL from home screen for fallback URL construction
+            const homeUrl = resolveRoute('home');
+            const storeBase = homeUrl ? (() => { try { const u = new URL(homeUrl); return u.origin; } catch { return null; } })() : null;
+            // Collections-list: multi-strategy resolution
+            console.log('[Tapcart] === Collections Resolution ===');
+            // Strategy 1: Direct route keys
+            const collRouteKeys = ['collections-list','collection-list','collections','collectionList','collectionsList'];
+            let collListUrl = null;
+            for (const rk of collRouteKeys) {
+                const rv = routes[rk];
+                console.log(`[Tapcart] Route "${rk}":`, JSON.stringify(rv), rv ? `screen exists: ${!!screens[rv]}` : '');
+                if (rv && screens[rv]) {
+                    const u = getScreenUrl(screens[rv]);
+                    if (u) { collListUrl = u; console.log(`[Tapcart] Collections: resolved via route "${rk}" → screen "${rv}" →`, u); break; }
+                }
+            }
+            // Strategy 2: Fuzzy screen key match (collection, collections, collectionlist etc)
+            if (!collListUrl) {
+                const collMatch = Object.entries(screens).find(([k]) => /collection/i.test(k) && !/\//.test(k));
+                if (collMatch) {
+                    const u = getScreenUrl(collMatch[1]);
+                    if (u) { collListUrl = u; console.log('[Tapcart] Collections: fuzzy screen match →', collMatch[0], '→', u); }
+                    else console.log('[Tapcart] Collections: fuzzy match found screen', collMatch[0], 'but no URL. Keys:', Object.keys(collMatch[1]));
+                }
+            }
+            // Strategy 3: Scan all screen URLs for /collections
+            if (!collListUrl) {
+                for (const [k,s] of Object.entries(screens)) {
+                    const u = getScreenUrl(s);
+                    if (u && /\/collections?\b/i.test(u) && !/\/collections?\/[^/]/i.test(u)) {
+                        collListUrl = u;
+                        console.log('[Tapcart] Collections: URL scan matched screen', k, '→', u);
+                        break;
+                    }
+                }
+            }
+            // Strategy 4: storeBase + /collections fallback
+            if (!collListUrl && storeBase) {
+                collListUrl = `${storeBase}/collections`;
+                console.log('[Tapcart] Collections: storeBase fallback →', collListUrl);
+            }
+            console.log('[Tapcart] Final collections URL:', collListUrl || 'NONE — all strategies failed');
+            if (!collListUrl) console.log('[Tapcart] DEBUG — All screens dump:', JSON.stringify(Object.fromEntries(Object.entries(screens).map(([k,v])=>[k,{keys:Object.keys(v),url:getScreenUrl(v)}]))));
+            // Notifications: skipped from auto-capture — requires native push opt-in (manual upload only)
+            const links = {
+                home:               resolveRoute('home'),
+                pdpBase:            resolveRoute('pdp'),
+                plpBase:            resolveRoute('plp'),
+                cart:               resolveRoute('cart'),
+                account:            accountRouteKey ? getScreenUrl(screens[accountRouteKey]) : null,
+                collectionsListBase:collListUrl,
+            };
+            console.log('[Tapcart] Store base URL:', storeBase);
             console.log('[Tapcart] Resolved links:', links);
             setAppLinks(links);
             const kit = extractBrandKit(data);
             setBrandKit(kit);
-            // Auto-apply brand kit immediately
             await applyBrandKitData(kit);
             let captureSelColl = '', captureSelProd = '';
             if (shopify?.shopifyApiKey && shopify?.storefrontApiURI) {
@@ -610,7 +912,6 @@ function App() {
                 [captureSelColl, captureSelProd] = await Promise.all([loadCollections(''), loadProducts('')]);
             }
             setLoadingApp(false);
-            // Auto-capture screenshots right after loading, passing fresh values directly
             await runCaptureWithLinks(links, {clearFirst: true, captureSelColl, captureSelProd});
         } catch { alert('❌ Failed to load app. Check the App ID.'); setLoadingApp(false); }
     };
@@ -627,27 +928,27 @@ function App() {
         const useProd = captureSelProd !== undefined ? captureSelProd : selProd;
         const pdpUrl = links.pdpBase&&useProd ? `${links.pdpBase}?productId=${useProd}` : links.pdpBase;
         const plpUrl = links.plpBase&&useColl ? `${links.plpBase}?collectionHandle=${useColl}` : links.plpBase;
-        // Scroll-trigger script forces lazy sections to hydrate before screenshot
-        const scrollScript = encodeURIComponent(`(function(){
-            var el=document.scrollingElement||document.body;
-            el.scrollTop=800;
-            setTimeout(function(){el.scrollTop=0;},800);
-        })()`);
+        const scrollScript = encodeURIComponent(`(function(){var el=document.scrollingElement||document.body;el.scrollTop=800;setTimeout(function(){el.scrollTop=0;},800);})()`);
+        // Order: Home, Collections, PLP, PDP, Account — Cart & Notifs are manual upload
+        // All screens get scroll:true to force lazy content to hydrate before capture
         const slots = [
-            {url:links.home,    label:'Home',    waitFor:7000, scroll:true},
-            {url:plpUrl,        label:'Browse',  waitFor:7000, scroll:true},
-            {url:pdpUrl,        label:'Product', waitFor:6000, scroll:true},
-            {url:links.account, label:'Account', waitFor:8000, scroll:true},
+            {url:links.home,               label:'Home',        waitFor:7000, scroll:true},
+            {url:links.collectionsListBase,label:'Collections', waitFor:6000, scroll:true},
+            {url:plpUrl,                   label:'PLP',         waitFor:7000, scroll:true},
+            {url:pdpUrl,                   label:'PDP',         waitFor:6000, scroll:true},
+            {url:links.account,            label:'Account',     waitFor:6000, scroll:true},
         ];
-        // Capture all screens in parallel for speed
         const validSlots = slots.filter(s=>s.url);
+        console.log('[Tapcart] Capture slots:', validSlots.map(s=>({label:s.label, url:s.url?s.url.slice(0,80):'NULL'})));
+        // Capture all screens in parallel for speed (~8s total instead of ~30s sequential)
         setCapProg(`Capturing ${validSlots.length} screens in parallel…`);
         const captureOne = async (slot) => {
+            console.log(`[Tapcart] 📸 Capturing ${slot.label}:`, slot.url);
             try {
                 const apiUrl=`https://api.microlink.io/?url=${encodeURIComponent(slot.url)}&screenshot=true&meta=false&viewport.width=390&viewport.height=1200&viewport.deviceScaleFactor=2&waitFor=${slot.waitFor}&javascript=true&adblock=true${slot.scroll?'&scripts[]='+scrollScript:''}`;
                 const res=await fetch(apiUrl), data=await res.json();
                 const imgUrl=data?.data?.screenshot?.url;
-                if (!imgUrl) return null;
+                if (!imgUrl) { console.warn(`[Tapcart] ⏭️ No screenshot for ${slot.label}`); return null; }
                 const proxied = `https://wsrv.nl/?url=${encodeURIComponent(imgUrl)}&output=png`;
                 const dataUrl = await new Promise(async(resolve,reject)=>{
                     try{const r=await fetch(proxied);if(!r.ok)throw new Error(`Image proxy ${r.status}`);const b=await r.blob();const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(b);}catch(e){reject(e);}
@@ -660,44 +961,18 @@ function App() {
             if (!r) continue;
             const id=nextId++; setLibCounter(id);
             setLibrary(lib=>[...(clearFirst?lib.filter(l=>l.id<id):lib), {id,label:r.label,dataUrl:r.dataUrl}]);
+            // Auto-assign into matching slot
+            setScreenshots(ss=>ss.map(s=>s.label===r.label?{...s,screenshotImage:r.dataUrl,containerScale:1,containerX:0,containerY:0}:s));
             captured++;
         }
         setCapProg(''); setCapturing(false);
-        if (captured>0) alert(`✅ ${captured} screenshot${captured>1?'s':''} captured!\n\nCart may be empty — upload manually via + Upload.`);
-        else alert('❌ No screenshots captured.\n\nMost likely cause: Microlink free tier rate limit (50 req/day per IP). Wait 24hrs or add a Microlink Pro API key.');
+        if (captured>0) alert(`✅ ${captured} screenshot${captured>1?'s':''} captured and loaded into slots!\n\nCart & Notifs require manual uploads — use + Upload in the library.`);
+        else alert('❌ No screenshots captured.\n\nMost likely cause: Microlink free tier rate limit (50 req/day per IP). Wait 24hrs or upgrade to Microlink Pro.');
     };
 
     const runCapture = async ({clearFirst=false}={}) => runCaptureWithLinks(appLinks, {clearFirst});
-
     const captureScreenshots   = () => runCapture({clearFirst:false});
     const recaptureScreenshots = () => runCapture({clearFirst:true});
-
-    const captureCartWithProducts = async () => {
-        if (!appLinks?.cart) { alert('No cart URL available.'); return; }
-        if (!shopifyRef.current||!selProd) { alert('Select a product first.'); return; }
-        setCapturingCart(true); setCartCapProg('Fetching variants…');
-        try {
-            const varData=await shopifyQuery(`{ product(id:"gid://shopify/Product/${selProd}") { title variants(first:5) { nodes { id availableForSale } } } }`);
-            const variants=varData?.data?.product?.variants?.nodes||[];
-            const variant=variants.find(v=>v.availableForSale)||variants[0];
-            const productTitle=varData?.data?.product?.title||'Product';
-            if (!variant) { alert('No variants found.'); setCapturingCart(false); return; }
-            const variantNumericId=variant.id.match(/\d+$/)?.[0];
-            setCartCapProg('Injecting cart & screenshotting…');
-            const cartPayload=JSON.stringify({items:[{id:parseInt(variantNumericId),variant_id:parseInt(variantNumericId),product_id:parseInt(selProd),title:productTitle,quantity:2,price:2999}],item_count:2,total_price:5998});
-            const injectScript=encodeURIComponent(`(function(){var keys=['cart','tapcart_cart','shopify_cart','cartData','__cart__'];var p=${cartPayload};keys.forEach(function(k){try{localStorage.setItem(k,JSON.stringify(p));}catch(e){}});})();`);
-            const apiUrl=`https://api.microlink.io/?url=${encodeURIComponent(appLinks.cart)}&screenshot=true&meta=false&viewport.width=390&viewport.height=1200&viewport.deviceScaleFactor=2&waitFor=4000&scripts[]=${injectScript}`;
-            const res=await fetch(apiUrl), data=await res.json();
-            const imgUrl=data?.data?.screenshot?.url;
-            if (!imgUrl) { alert('Screenshot failed — upload cart manually.'); setCapturingCart(false); setCartCapProg(''); return; }
-            const dataUrl=await new Promise(async(resolve,reject)=>{
-                try{const r=await fetch(imgUrl);const b=await r.blob();const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(b);}catch(e){reject(e);}
-            });
-            setLibrary(lib=>{ const idx=lib.findIndex(l=>l.label==='Cart'); if(idx>=0){const next=[...lib];next[idx]={...next[idx],dataUrl};return next;} return [...lib,{id:Date.now(),label:'Cart',dataUrl}]; });
-            alert(`✅ Cart captured with ${productTitle}!`);
-        } catch(err) { console.error(err); alert('❌ Cart capture failed.'); }
-        finally { setCapturingCart(false); setCartCapProg(''); }
-    };
 
     const uploadFont = async (e, isH) => {
         const file=e.target.files[0]; if(!file) return;
@@ -706,7 +981,19 @@ function App() {
             try {
                 const name=file.name.replace(/\.(ttf|otf|woff|woff2)$/i,'')+(isH?'-h':'-s');
                 const face=new FontFace(name,ev.target.result); await face.load(); document.fonts.add(face);
+                const wasEmpty = isH ? !hFont : !sFont;
                 if(isH){setHFont(name);setHFontName(file.name);}else{setSFont(name);setSFontName(file.name);}
+                // On first font upload (when no font was set), apply to all screens
+                if (wasEmpty) {
+                    const key = isH ? 'hFont' : 'sFont';
+                    const nameKey = isH ? 'hFontName' : 'sFontName';
+                    for (let i = 0; i < screenshots.length; i++) {
+                        if (!configsRef.current[i]) configsRef.current[i] = {...DEFAULT_CONFIG, elements:[]};
+                        configsRef.current[i][key] = name;
+                        configsRef.current[i][nameKey] = file.name;
+                    }
+                    showToast(`Font applied to all screens`);
+                }
             } catch { alert('Failed to load font.'); }
         };
         reader.readAsArrayBuffer(file);
@@ -725,18 +1012,20 @@ function App() {
         reader.onload=ev=>{setBgImg(ev.target.result);setUseGrad(false);};
         reader.readAsDataURL(file); e.target.value='';
     };
-    const uploadCartImage = e => {
+
+    const uploadElemImage = e => {
         const file=e.target.files[0]; if(!file) return;
         const reader=new FileReader();
         reader.onload=ev=>{
-            const dataUrl=ev.target.result;
-            setLibrary(lib=>{const idx=lib.findIndex(l=>l.label==='Cart');if(idx>=0){const next=[...lib];next[idx]={...next[idx],dataUrl};return next;}return[...lib,{id:Date.now(),label:'Cart',dataUrl}];});
+            setElements(els=>[...els,{id:Date.now(),type:'image',content:file.name.replace(/\.[^.]+$/,''),src:ev.target.result,x:50,y:50,size:200}]);
         };
         reader.readAsDataURL(file); e.target.value='';
     };
 
     const saveProject = () => {
-        const data={version:'1.5',screenshots,library,settings:{hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,useGrad,grad1,grad2,bgImg,bgOp,shadow,sBlur,sOp,sOffY,sColor,guides,tCase,lang}};
+        // Save current screen config before serializing
+        configsRef.current[activeIdx] = getCurrentConfig();
+        const data={version:'2.0',screenshots,library,perScreenConfigs:configsRef.current,activeIdx,settings:{guides,lang}};
         const a=document.createElement('a');
         a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
         a.download='tapcart-project.json'; a.click();
@@ -749,58 +1038,167 @@ function App() {
                 const d=JSON.parse(ev.target.result);
                 if(d.screenshots) setScreenshots(d.screenshots);
                 if(d.library) setLibrary(d.library);
+                // v2.0: load per-screen configs
+                if(d.perScreenConfigs) {
+                    configsRef.current = d.perScreenConfigs;
+                    const idx = d.activeIdx || 0;
+                    const cfg = configsRef.current[idx] || {...DEFAULT_CONFIG, elements:[]};
+                    applyConfig(cfg);
+                    prevIdxRef.current = idx;
+                    setActiveIdx(idx);
+                } else {
+                    // Legacy v1.x: apply settings as global config to all screens
+                    const s=d.settings||{};
+                    const cfg = {...DEFAULT_CONFIG};
+                    if(s.hSize!=null)cfg.hSize=s.hSize;if(s.sSize!=null)cfg.sSize=s.sSize;
+                    if(s.hY!=null)cfg.hY=s.hY;if(s.sY!=null)cfg.sY=s.sY;
+                    if(s.hSp!=null)cfg.hSp=s.hSp;if(s.sSp!=null)cfg.sSp=s.sSp;
+                    if(s.hMg!=null)cfg.hMg=s.hMg;if(s.sMg!=null)cfg.sMg=s.sMg;
+                    if(s.useGrad!=null)cfg.useGrad=s.useGrad;
+                    if(s.grad1)cfg.grad1=s.grad1;if(s.grad2)cfg.grad2=s.grad2;
+                    if(s.gradAngle!=null)cfg.gradAngle=s.gradAngle;
+                    if(s.bgImg)cfg.bgImg=s.bgImg;if(s.bgOp!=null)cfg.bgOp=s.bgOp;
+                    if(s.bgBlur!=null)cfg.bgBlur=s.bgBlur;
+                    if(s.bgOverlay)cfg.bgOverlay=s.bgOverlay;if(s.bgOverlayOp!=null)cfg.bgOverlayOp=s.bgOverlayOp;
+                    if(s.noise!=null)cfg.noise=s.noise;if(s.noiseInt!=null)cfg.noiseInt=s.noiseInt;
+                    if(s.shadow!=null)cfg.shadow=s.shadow;
+                    if(s.sBlur!=null)cfg.sBlur=s.sBlur;if(s.sOp!=null)cfg.sOp=s.sOp;
+                    if(s.sOffX!=null)cfg.sOffX=s.sOffX;if(s.sOffY!=null)cfg.sOffY=s.sOffY;if(s.sColor)cfg.sColor=s.sColor;
+                    if(s.cornerR!=null)cfg.cornerR=s.cornerR;
+                    if(s.shotRotate!=null)cfg.shotRotate=s.shotRotate;
+                    if(s.elements)cfg.elements=s.elements;
+                    if(s.hWeight)cfg.hWeight=s.hWeight;if(s.sWeight)cfg.sWeight=s.sWeight;
+                    if(s.tCase)cfg.tCase=s.tCase;
+                    applyConfig(cfg);
+                    for(let i=0;i<(d.screenshots||DEFAULT_SHOTS).length;i++) configsRef.current[i]={...cfg,elements:cfg.elements?cfg.elements.map(e=>({...e})):[]};
+                }
                 const s=d.settings||{};
-                if(s.hSize!=null)setHSize(s.hSize);if(s.sSize!=null)setSSize(s.sSize);
-                if(s.hY!=null)setHY(s.hY);if(s.sY!=null)setSY(s.sY);
-                if(s.hSp!=null)setHSp(s.hSp);if(s.sSp!=null)setSSp(s.sSp);
-                if(s.hMg!=null)setHMg(s.hMg);if(s.sMg!=null)setSMg(s.sMg);
-                if(s.useGrad!=null)setUseGrad(s.useGrad);
-                if(s.grad1)setGrad1(s.grad1);if(s.grad2)setGrad2(s.grad2);
-                if(s.bgImg)setBgImg(s.bgImg);if(s.bgOp!=null)setBgOp(s.bgOp);
-                if(s.shadow!=null)setShadow(s.shadow);
-                if(s.sBlur!=null)setSBlur(s.sBlur);if(s.sOp!=null)setSOp(s.sOp);
-                if(s.sOffY!=null)setSOffY(s.sOffY);if(s.sColor)setSColor(s.sColor);
                 if(s.guides!=null)setGuides(s.guides);
-                if(s.tCase)setTCase(s.tCase);if(s.lang)setLang(s.lang);
+                if(s.lang)setLang(s.lang);
                 alert('✅ Project loaded!');
-            } catch { alert('❌ Invalid project file.'); }
+            } catch(err) { console.error(err); alert('❌ Invalid project file.'); }
         };
         reader.readAsText(file); e.target.value='';
     };
 
-    // ── Canvas ─────────────────────────────────────────────────────────────────
+    // ── Canvas ────────────────────────────────────────────────────────────────
     const roundRect=(ctx,x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
     const wrapText=(ctx,text,x,y,maxW,spacing,lh)=>{const words=text.split(' ');let line='',lines=[];for(let n=0;n<words.length;n++){const test=line+words[n]+' ';const w=spacing!==0?test.split('').reduce((s,c)=>s+ctx.measureText(c).width+spacing,0)-spacing:ctx.measureText(test).width;if(w>maxW&&n>0){lines.push(line);line=words[n]+' ';}else line=test;}lines.push(line);const startY=y-((lines.length-1)*lh)/2;lines.forEach((ln,i)=>{const ly=startY+i*lh;if(spacing!==0){const chars=ln.trim().split('');let tw=0;const cws=chars.map(c=>{const cw=ctx.measureText(c).width;tw+=cw+spacing;return cw;});tw-=spacing;let cx=x-tw/2;chars.forEach((c,j)=>{ctx.fillText(c,cx+cws[j]/2,ly);cx+=cws[j]+spacing;});}else ctx.fillText(ln.trim(),x,ly);});};
 
-    const renderToCanvas=async(ss,canvas)=>{
+    const renderToCanvas=async(ss,canvas,cfg)=>{
         if(!canvas) return;
+        // cfg = per-screen config. If not passed, use current live state (for preview).
+        const C = cfg || getCurrentConfig();
+        const _applyCase = t => {
+            if(C.tCase==='uppercase')return t.toUpperCase();if(C.tCase==='lowercase')return t.toLowerCase();
+            if(C.tCase==='capitalize')return t.split(' ').map(w=>w[0].toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+            return t;
+        };
         const ctx=canvas.getContext('2d'),sp=DEVICE_SPECS[ss.deviceType];
         canvas.width=sp.cw;canvas.height=sp.ch;
-        if(bgImg){const img=new Image();img.src=bgImg;await new Promise(r=>{img.onload=r;img.onerror=r;});ctx.globalAlpha=bgOp;const sc=Math.max(sp.cw/img.width,sp.ch/img.height);ctx.drawImage(img,(sp.cw-img.width*sc)/2,(sp.ch-img.height*sc)/2,img.width*sc,img.height*sc);ctx.globalAlpha=1;}
-        else if(useGrad&&grad1&&grad2){const g=ctx.createLinearGradient(0,0,0,canvas.height);g.addColorStop(0,grad1);g.addColorStop(1,grad2);ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);}
-        else{ctx.fillStyle=ss.backgroundColor;ctx.fillRect(0,0,canvas.width,canvas.height);}
-        if(!ss.screenshotImage){const cw=sp.dw,ch=sp.dh,cx=(sp.cw-cw)/2,cy=sp.dy;ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=4;ctx.setLineDash([20,15]);roundRect(ctx,cx,cy,cw,ch,sp.cr);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 28px Arial';ctx.fillText('Select from library',sp.cw/2,cy+ch/2);}
-        const hFam=hFont||'system-ui,Arial,sans-serif',sFam=sFont||'system-ui,Arial,sans-serif';
-        const aH=ss.deviceType==='android'?60:hSize,aS=ss.deviceType==='android'?36:sSize;
+        if(C.bgImg){
+            const img=new Image();img.src=C.bgImg;await new Promise(r=>{img.onload=r;img.onerror=r;});
+            if(C.bgBlur>0)ctx.filter=`blur(${C.bgBlur}px)`;
+            ctx.globalAlpha=C.bgOp;
+            const sc=Math.max(sp.cw/img.width,sp.ch/img.height);
+            ctx.drawImage(img,(sp.cw-img.width*sc)/2,(sp.ch-img.height*sc)/2,img.width*sc,img.height*sc);
+            ctx.filter='none';ctx.globalAlpha=1;
+            if(C.bgOverlayOp>0){const r2=parseInt(C.bgOverlay.slice(1,3),16),g2=parseInt(C.bgOverlay.slice(3,5),16),b2=parseInt(C.bgOverlay.slice(5,7),16);ctx.fillStyle=`rgba(${r2},${g2},${b2},${C.bgOverlayOp/100})`;ctx.fillRect(0,0,sp.cw,sp.ch);}
+        } else if(C.useGrad&&C.grad1&&C.grad2){
+            const ang=(C.gradAngle-90)*Math.PI/180;
+            const x1=sp.cw/2-Math.cos(ang)*sp.cw,y1=sp.ch/2-Math.sin(ang)*sp.ch;
+            const x2=sp.cw/2+Math.cos(ang)*sp.cw,y2=sp.ch/2+Math.sin(ang)*sp.ch;
+            const g=ctx.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,C.grad1);g.addColorStop(1,C.grad2);ctx.fillStyle=g;ctx.fillRect(0,0,sp.cw,sp.ch);
+        } else{ctx.fillStyle=ss.backgroundColor;ctx.fillRect(0,0,canvas.width,canvas.height);}
+        if(C.noise&&C.noiseInt>0){const id=ctx.getImageData(0,0,sp.cw,sp.ch);const d=id.data;const amt=(C.noiseInt/100)*80;for(let i=0;i<d.length;i+=4){const n=(Math.random()-0.5)*amt;d[i]=Math.max(0,Math.min(255,d[i]+n));d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));}ctx.putImageData(id,0,0);}
+
+        const isManualOnly = ss.label === 'Cart' || ss.label === 'Notifs';
+        const manualIcons = { Cart:'🛒', Notifs:'🔔' };
+        const manualReasons = { Cart:'cart requires an active session with items added', Notifs:'push notifications require native device opt-in' };
+
+        if(!ss.screenshotImage){
+            const cw=sp.dw,ch=sp.dh,cx=(sp.cw-cw)/2,cy=sp.dy;
+            ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=4;ctx.setLineDash([20,15]);
+            roundRect(ctx,cx,cy,cw,ch,sp.cr);ctx.stroke();ctx.setLineDash([]);
+
+            if (isManualOnly) {
+                ctx.fillStyle='rgba(255,255,255,0.15)';
+                roundRect(ctx,cx,cy,cw,ch,sp.cr); ctx.fill();
+                ctx.fillStyle='rgba(255,255,255,0.5)';
+                ctx.font='bold 80px Arial';
+                ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.fillText(manualIcons[ss.label]||'📷', sp.cw/2, cy+ch/2 - 100);
+                ctx.fillStyle='rgba(255,255,255,0.9)';
+                ctx.font='bold 32px Arial';
+                ctx.fillText(`${ss.label} requires manual upload`, sp.cw/2, cy+ch/2 - 10);
+                ctx.fillStyle='rgba(255,255,255,0.55)';
+                ctx.font='26px Arial';
+                ctx.fillText(`Auto-capture not supported — ${manualReasons[ss.label]||'manual upload needed'}.`, sp.cw/2, cy+ch/2 + 60);
+                ctx.fillStyle='rgba(255,255,255,0.4)';
+                ctx.font='24px Arial';
+                ctx.fillText('Use + Upload in the library to add your screenshot.', sp.cw/2, cy+ch/2 + 130);
+            } else {
+                ctx.fillStyle='rgba(255,255,255,0.5)';
+                ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.font='bold 28px Arial';
+                ctx.fillText('Select from library',sp.cw/2,cy+ch/2);
+            }
+        }
+
+        const hFam=C.hFont||'system-ui,Arial,sans-serif',sFam=C.sFont||'system-ui,Arial,sans-serif';
+        const aH=ss.deviceType==='android'?60:C.hSize,aS=ss.deviceType==='android'?36:C.sSize;
         ctx.fillStyle=ss.textColor;ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.font=`bold ${aH}px ${hFam}`;wrapText(ctx,applyCase(ss.headline),sp.cw/2,hY,sp.cw-hMg*2,hSp,aH*1.2);
-        ctx.font=`${aS}px ${sFam}`;wrapText(ctx,applyCase(ss.subheadline),sp.cw/2,sY,sp.cw-sMg*2,sSp,aS*1.2);
+        ctx.font=`${C.hWeight} ${aH}px ${hFam}`;wrapText(ctx,_applyCase(ss.headline),sp.cw/2,C.hY,sp.cw-C.hMg*2,C.hSp,aH*1.2);
+        ctx.font=`${C.sWeight} ${aS}px ${sFam}`;wrapText(ctx,_applyCase(ss.subheadline),sp.cw/2,C.sY,sp.cw-C.sMg*2,C.sSp,aS*1.2);
+
         if(ss.screenshotImage){
             const img=new Image();img.src=ss.screenshotImage;await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
             const cw=sp.dw*ss.containerScale,ch=sp.dh*ss.containerScale;
             const cx=(sp.cw-cw)/2+ss.containerX,cy=sp.dy+ss.containerY;
-            if(shadow){const r=parseInt(sColor.slice(1,3),16),g=parseInt(sColor.slice(3,5),16),b=parseInt(sColor.slice(5,7),16);ctx.shadowColor=`rgba(${r},${g},${b},${sOp})`;ctx.shadowBlur=sBlur;ctx.shadowOffsetX=0;ctx.shadowOffsetY=sOffY;}
-            ctx.fillStyle='#fff';roundRect(ctx,cx,cy,cw,ch,sp.cr*ss.containerScale);ctx.fill();
-            ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-            ctx.save();roundRect(ctx,cx,cy,cw,ch,sp.cr*ss.containerScale);ctx.clip();
+            const cr=(C.cornerR>=0?C.cornerR:sp.cr)*ss.containerScale;
+            ctx.save();
+            if(C.shotRotate!==0){const mx=cx+cw/2,my=cy+ch/2;ctx.translate(mx,my);ctx.rotate(C.shotRotate*Math.PI/180);ctx.translate(-mx,-my);}
+            if(C.shadow){const r=parseInt(C.sColor.slice(1,3),16),g=parseInt(C.sColor.slice(3,5),16),b=parseInt(C.sColor.slice(5,7),16);ctx.shadowColor=`rgba(${r},${g},${b},${C.sOp})`;ctx.shadowBlur=C.sBlur;ctx.shadowOffsetX=C.sOffX;ctx.shadowOffsetY=C.sOffY;}
+            ctx.fillStyle='#fff';roundRect(ctx,cx,cy,cw,ch,cr);ctx.fill();
+            ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+            ctx.save();roundRect(ctx,cx,cy,cw,ch,cr);ctx.clip();
             const sc=cw/img.width,iw=img.width*sc,ih=img.height*sc;
-            ctx.drawImage(img,cx+(cw-iw)/2+shotX,cy+shotY,iw,ih);ctx.restore();
+            ctx.drawImage(img,cx+(cw-iw)/2+C.shotX,cy+C.shotY,iw,ih);ctx.restore();
             if(showHnds){const hs=30,ho=10;ctx.fillStyle=canDragShot?'rgba(16,185,129,0.8)':'rgba(99,102,241,0.8)';ctx.strokeStyle='#fff';ctx.lineWidth=3;[[cx+ho,cy+ho],[cx+cw-ho,cy+ho],[cx+ho,cy+ch-ho],[cx+cw-ho,cy+ch-ho]].forEach(([hx,hy])=>{ctx.beginPath();ctx.arc(hx,hy,hs/2,0,Math.PI*2);ctx.fill();ctx.stroke();});}
+            ctx.restore();
         }
         if(guides){ctx.setLineDash([10,5]);ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sp.cw/2,0);ctx.lineTo(sp.cw/2,sp.ch);ctx.stroke();ctx.beginPath();ctx.moveTo(0,sp.ch/2);ctx.lineTo(sp.cw,sp.ch/2);ctx.stroke();[1,2].forEach(n=>{ctx.beginPath();ctx.moveTo(sp.cw/3*n,0);ctx.lineTo(sp.cw/3*n,sp.ch);ctx.stroke();ctx.beginPath();ctx.moveTo(0,sp.ch/3*n);ctx.lineTo(sp.cw,sp.ch/3*n);ctx.stroke();});ctx.setLineDash([]);}
+        // Overlay elements
+        const _elements = C.elements || [];
+        for(const el of _elements){
+            const ex=el.x/100*sp.cw,ey=el.y/100*sp.ch;
+            ctx.save();ctx.translate(ex,ey);
+            if(el.type==='image'&&el.src){
+                const sz=el.size||200;
+                const img=new Image();img.src=el.src;
+                await new Promise(r=>{img.onload=r;img.onerror=r;});
+                const aspect=img.width/img.height;
+                const dw=aspect>=1?sz:sz*aspect;
+                const dh=aspect>=1?sz/aspect:sz;
+                ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
+            } else if(el.type==='icon'&&el.svgPath){
+                const sz=el.size||120;
+                const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${el.color||'#ffffff'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${el.svgPath}</svg>`;
+                const blob=new Blob([svgStr],{type:'image/svg+xml'});
+                const url=URL.createObjectURL(blob);
+                const si=new Image();si.src=url;
+                await new Promise(r=>{si.onload=r;si.onerror=r;});
+                ctx.drawImage(si,-sz/2,-sz/2,sz,sz);
+                URL.revokeObjectURL(url);
+            } else {
+                ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.font=`${el.size||120}px Arial`;ctx.fillText(el.content,0,0);
+            }
+            ctx.restore();
+        }
     };
 
-    useEffect(()=>{if(canvasRef.current)renderToCanvas(cur,canvasRef.current);},[cur,hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,hFont,sFont,useGrad,grad1,grad2,bgImg,bgOp,showHnds,shotX,shotY,canDragShot,shadow,sBlur,sOp,sOffY,sColor,guides,tCase]);
+    useEffect(()=>{if(canvasRef.current)renderToCanvas(cur,canvasRef.current);},[cur,hSize,sSize,hY,sY,hSp,sSp,hMg,sMg,hFont,sFont,hWeight,sWeight,useGrad,grad1,grad2,gradAngle,bgImg,bgOp,bgBlur,bgOverlay,bgOverlayOp,noise,noiseInt,showHnds,shotX,shotY,canDragShot,shadow,sBlur,sOp,sOffX,sOffY,sColor,cornerR,shotRotate,elements,guides,tCase]);
     useEffect(()=>{if(canvasRef.current)renderToCanvas(cur,canvasRef.current);},[]);
     useEffect(()=>{
         const onKey = e => {
@@ -817,12 +1215,36 @@ function App() {
         return () => window.removeEventListener('keydown', onKey);
     },[cur.screenshotImage]);
 
-    const onDblClick=e=>{if(!canvasRef.current||!cur.screenshotImage)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){setCanDragShot(v=>!v);}};
+    // Dynamic preview scale — fit canvas in available container
+    useEffect(()=>{
+        if(!canvasContainerRef.current) return;
+        const observe = () => {
+            const el = canvasContainerRef.current;
+            if(!el) return;
+            const pad = 64; // 2×p-8
+            const availW = el.clientWidth  - pad;
+            const availH = el.clientHeight - pad;
+            const scale  = Math.min(availW / spec.cw, availH / spec.ch, 0.55);
+            setPreviewScale(Math.max(scale, 0.18));
+        };
+        observe();
+        const ro = new ResizeObserver(observe);
+        ro.observe(canvasContainerRef.current);
+        return () => ro.disconnect();
+    },[spec.cw, spec.ch]);
+
+    const onDblClick=e=>{if(!canvasRef.current||!cur.screenshotImage)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/previewScale,y=(e.clientY-rect.top)/previewScale;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){setCanDragShot(v=>!v);}};
     const [openTextAccordion, setOpenTextAccordion] = useState(0);
-    const onMouseDown=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;if(Math.abs(y-hY)<50&&x>100&&x<spec.cw-100){setDragHl(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(Math.abs(y-sY)<50&&x>100&&x<spec.cw-100){setDragSub(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(!cur.screenshotImage)return;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;const ho=10,hs=30;for(const[hx,hy]of[[cx+ho,cy+ho],[cx+cw-ho,cy+ho],[cx+ho,cy+ch-ho],[cx+cw-ho,cy+ch-ho]]){if(Math.hypot(x-hx,y-hy)<=hs/2){setDragHnd(true);setDragStart({x,y,scale:cur.containerScale});return;}}if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){if(canDragShot)setDragShot(true);else setDragCont(true);setDragStart({x,y});}};
-    const onMouseMove=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/PREVIEW_SCALE,y=(e.clientY-rect.top)/PREVIEW_SCALE;if(cur.screenshotImage&&!dragHl&&!dragSub&&!dragCont&&!dragHnd&&!dragShot){const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;setShowHnds(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch);}if(dragHl)setHY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragSub)setSY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragHnd){const cCx=spec.cw/2+cur.containerX,cCy=spec.dy+(spec.dh*dragStart.scale)/2+cur.containerY;const sd=Math.hypot(dragStart.x-cCx,dragStart.y-cCy),cd=Math.hypot(x-cCx,y-cCy);updCur({containerScale:Math.max(0.5,Math.min(2,dragStart.scale*cd/sd))});}else if(dragShot){setShotX(v=>v+(x-dragStart.x));setShotY(v=>v+(y-dragStart.y));setDragStart({x,y});}else if(dragCont){updCur({containerX:cur.containerX+(x-dragStart.x),containerY:cur.containerY+(y-dragStart.y)});setDragStart({x,y});}};
-    const onMouseUp=()=>{setDragHl(false);setDragSub(false);setDragCont(false);setDragHnd(false);setDragShot(false);};
-    const onMouseLeave=()=>{setShowHnds(false);onMouseUp();};
+    const onMouseDown=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/previewScale,y=(e.clientY-rect.top)/previewScale;
+        // Elements are on top — check them first (use generous hit box for all types)
+        for(let i=elements.length-1;i>=0;i--){const el=elements[i];const ex=el.x/100*spec.cw,ey=el.y/100*spec.ch;const sz=el.size||(el.type==='image'?200:120);const half=sz/2;if(Math.abs(x-ex)<=half&&Math.abs(y-ey)<=half){setDragElem(el.id);setDragStart({x,y});return;}}
+        if(Math.abs(y-hY)<50&&x>100&&x<spec.cw-100){setDragHl(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(Math.abs(y-sY)<50&&x>100&&x<spec.cw-100){setDragSub(true);setDragStart({x,y});setOpenTextAccordion(n=>n+1);return;}if(!cur.screenshotImage)return;const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;const ho=10,hs=30;for(const[hx,hy]of[[cx+ho,cy+ho],[cx+cw-ho,cy+ho],[cx+ho,cy+ch-ho],[cx+cw-ho,cy+ch-ho]]){if(Math.hypot(x-hx,y-hy)<=hs/2){setDragHnd(true);setDragStart({x,y,scale:cur.containerScale});return;}}if(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch){if(canDragShot)setDragShot(true);else setDragCont(true);setDragStart({x,y});}};
+    const onMouseMove=e=>{if(!canvasRef.current)return;const rect=canvasRef.current.getBoundingClientRect();const x=(e.clientX-rect.left)/previewScale,y=(e.clientY-rect.top)/previewScale;
+        // Element drag
+        if(dragElem!==null){const newX=Math.max(0,Math.min(100,x/spec.cw*100)),newY=Math.max(0,Math.min(100,y/spec.ch*100));setElements(els=>els.map(e=>e.id===dragElem?{...e,x:Math.round(newX*10)/10,y:Math.round(newY*10)/10}:e));return;}
+        if(cur.screenshotImage&&!dragHl&&!dragSub&&!dragCont&&!dragHnd&&!dragShot){const cw=spec.dw*cur.containerScale,ch=spec.dh*cur.containerScale;const cx=(spec.cw-cw)/2+cur.containerX,cy=spec.dy+cur.containerY;setShowHnds(x>=cx&&x<=cx+cw&&y>=cy&&y<=cy+ch);}if(dragHl)setHY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragSub)setSY(Math.round(Math.max(30,Math.min(spec.ch-50,y))));else if(dragHnd){const cCx=spec.cw/2+cur.containerX,cCy=spec.dy+(spec.dh*dragStart.scale)/2+cur.containerY;const sd=Math.hypot(dragStart.x-cCx,dragStart.y-cCy),cd=Math.hypot(x-cCx,y-cCy);updCur({containerScale:Math.max(0.5,Math.min(2,dragStart.scale*cd/sd))});}else if(dragShot){setShotX(v=>v+(x-dragStart.x));setShotY(v=>v+(y-dragStart.y));setDragStart({x,y});}else if(dragCont){updCur({containerX:cur.containerX+(x-dragStart.x),containerY:cur.containerY+(y-dragStart.y)});setDragStart({x,y});}};
+    const onMouseUp=()=>{setDragHl(false);setDragSub(false);setDragCont(false);setDragHnd(false);setDragShot(false);setDragElem(null);};
+    const onMouseLeave=()=>{setShowHnds(false);onMouseUp()};
 
     const [selectedSlots, setSelectedSlots] = useState(new Set([1,2,3,4,5]));
     const toggleSlot = id => setSelectedSlots(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
@@ -830,7 +1252,7 @@ function App() {
     const addSlot = () => {
         setScreenshots(ss => {
             const newId = Math.max(...ss.map(s=>s.id)) + 1;
-            const newSlot = { id:newId, deviceType:'iphone', headline:'NEW SLIDE', subheadline:'ADD YOUR CONTENT HERE', backgroundColor:'#000000', textColor:'#ffffff', screenshotImage:null, containerScale:1, containerX:0, containerY:0 };
+            const newSlot = { id:newId, label:`Slot ${newId}`, deviceType:'iphone', headline:'NEW SLIDE', subheadline:'ADD YOUR CONTENT HERE', backgroundColor:'#000000', textColor:'#ffffff', screenshotImage:null, containerScale:1, containerX:0, containerY:0 };
             setSelectedSlots(prev => new Set([...prev, newId]));
             return [...ss, newSlot];
         });
@@ -838,26 +1260,76 @@ function App() {
     const removeSlot = id => {
         setScreenshots(ss => { if(ss.length<=1) return ss; return ss.filter(s=>s.id!==id); });
         setSelectedSlots(prev => { const next=new Set(prev); next.delete(id); return next; });
-        setActiveIdx(i => Math.max(0, i-1));
+        const newIdx = Math.max(0, activeIdx-1);
+        switchScreen(newIdx);
     };
 
-    const download=async ss=>{const c=document.createElement('canvas');await renderToCanvas(ss,c);c.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`app-listing-${ss.id}-${ss.deviceType}.png`;a.click();});};
-    const downloadAll=async()=>{for(const ss of screenshots){if(ss.screenshotImage&&selectedSlots.has(ss.id)){await download(ss);await new Promise(r=>setTimeout(r,300));}}};
-    const downloadBoth=async()=>{for(const p of['iphone','android'])for(const ss of screenshots){if(ss.screenshotImage&&selectedSlots.has(ss.id)){await download({...ss,deviceType:p});await new Promise(r=>setTimeout(r,300));}}alert('Downloaded all for iOS + Android!');};
+    const renderToBlob=async(ss,cfg)=>new Promise(async resolve=>{const c=document.createElement('canvas');await renderToCanvas(ss,c,cfg);c.toBlob(resolve,'image/png');});
+    const download=async ss=>{const blob=await renderToBlob(ss,getConfigForScreen(screenshots.indexOf(ss)));const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`app-listing-${ss.id}-${ss.label||ss.id}-${ss.deviceType}.png`;a.click();};
+    const zipName = (suffix='') => { const base=(appName.trim()||appId||'tapcart').replace(/[^a-z0-9]/gi,'-').toLowerCase(); return `${base}-screenshots${suffix}.zip`; };
+    const downloadAll=async()=>{
+        const zip=new JSZip();
+        for(let i=0;i<screenshots.length;i++){const ss=screenshots[i];if(!ss.screenshotImage||!selectedSlots.has(ss.id))continue;const blob=await renderToBlob(ss,getConfigForScreen(i));zip.file(`${ss.id}-${ss.label||ss.id}-iphone.png`,blob);}
+        const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(out);a.download=zipName();a.click();
+    };
+    const downloadBoth=async()=>{
+        const zip=new JSZip();
+        for(const p of['iphone','android'])for(let i=0;i<screenshots.length;i++){const ss=screenshots[i];if(!ss.screenshotImage||!selectedSlots.has(ss.id))continue;const blob=await renderToBlob({...ss,deviceType:p},getConfigForScreen(i));zip.file(`${ss.id}-${ss.label||ss.id}-${p}.png`,blob);}
+        const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(out);a.download=zipName('-ios-android');a.click();
+    };
+
+    const openAllPreview = async () => {
+        setShowAllPreview(true);
+        setAllPreviews([]);
+        const previews = [];
+        for (let i=0;i<screenshots.length;i++) {
+            const ss=screenshots[i];
+            if (!ss.screenshotImage) continue;
+            const ssSpec = DEVICE_SPECS[ss.deviceType || 'iphone'];
+            const offscreen = document.createElement('canvas');
+            offscreen.width = ssSpec.cw; offscreen.height = ssSpec.ch;
+            await renderToCanvas(ss, offscreen, getConfigForScreen(i));
+            previews.push({ id: ss.id, label: ss.label || `Slot ${ss.id}`, dataURL: offscreen.toDataURL('image/png') });
+        }
+        setAllPreviews(previews);
+    };
 
     const hasBrandColors = brandKit && (brandKit.backgroundColor || brandKit.textColor || brandKit.fontFamily);
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col" style={{fontFamily:'system-ui,-apple-system,sans-serif'}}>
+        <div className="h-screen overflow-hidden bg-gray-100 flex flex-col" style={{fontFamily:'system-ui,-apple-system,sans-serif'}}>
 
             {/* Top bar */}
-            <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between flex-shrink-0">
+            <div className="px-5 py-2.5 flex items-center justify-between flex-shrink-0" style={{background:"#1B191B"}}>
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs font-black">T</div>
-                    <span className="font-semibold text-gray-900 text-sm">Screenshot Generator</span>
-                    <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">v1.5</span>
+                    <span className="font-bold text-white text-base tracking-[0.13em] uppercase">Screenshot Generator</span>
+                    <span className="text-[9px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded-full font-medium">v2.0</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                    {/* Language flag picker — single flag dropdown */}
+                    <div className="relative">
+                        {langOpen && <div className="fixed inset-0 z-40" onClick={()=>setLangOpen(false)}/>}
+                        <button onClick={()=>setLangOpen(v=>!v)}
+                            className="flex items-center gap-1.5 px-2.5 h-8 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                            <span className="text-base leading-none">{LANG_FLAGS[lang]}</span>
+                            <span className="text-[10px] font-bold text-white tracking-wide">{lang.toUpperCase()}</span>
+                            <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" className={`transition-transform ${langOpen?'rotate-180':''}`}><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+                        </button>
+                        {langOpen && (
+                            <div className="absolute right-0 top-full mt-1 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-1.5 z-50 min-w-[160px]">
+                                {Object.entries(LANG_FLAGS).map(([code,flag])=>(
+                                    <button key={code} onClick={()=>{changeLang(code);setLangOpen(false);}}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${lang===code?'bg-[#3f1efb]/20 text-white':'text-gray-300 hover:bg-gray-800 hover:text-white'}`}>
+                                        <span className="text-base leading-none">{flag}</span>
+                                        <span className="text-[11px] font-semibold flex-1">{LANG_NAMES[code]}</span>
+                                        <span className="text-[9px] font-bold text-gray-500 tracking-wider">{code.toUpperCase()}</span>
+                                        {lang===code && <span className="text-[10px]">✓</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="w-px h-5 bg-gray-700"/>
                     <Btn onClick={saveProject} variant="ghost">💾 Save</Btn>
                     <Btn onClick={()=>projectLoadRef.current?.click()} variant="ghost">📂 Load</Btn>
                     <input ref={projectLoadRef} type="file" accept=".json" onChange={loadProject} className="hidden"/>
@@ -867,19 +1339,62 @@ function App() {
             <div className="flex flex-1 overflow-hidden" style={{height:'calc(100vh - 52px)'}}>
 
                 {/* ── Left sidebar ── */}
-                <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-
-                    {/* App loader */}
-                    <div className="p-4 border-b border-gray-100">
+                <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex-shrink-0">
                         <span className="section-label">Tapcart App ID</span>
                         <div className="flex gap-2">
                             <input type="text" value={appId} onChange={e=>setAppId(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchApp()}
                                 placeholder="e.g. mLMFK4fI6j"
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"/>
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white"/>
                             <Btn onClick={fetchApp} disabled={loadingApp||capturing||!appId.trim()} variant="primary">{loadingApp?'Loading…':capturing?'Capturing…':'Load'}</Btn>
                         </div>
 
-                        {/* Brand kit */}
+                        <div className="mt-2">
+                            <span className="section-label">App Name <span className="normal-case font-normal text-gray-400">(used in export filename)</span></span>
+                            <input type="text" value={appName} onChange={e=>setAppName(e.target.value)}
+                                placeholder="e.g. NopokoShop"
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white text-gray-700"/>
+                        </div>
+
+                        {/* Layout Templates */}
+                        <div className="mt-3">
+                            <Accordion title="🎨 Layout Templates" defaultOpen={false}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {LAYOUT_TEMPLATES.map(tpl => {
+                                        const isActive = selectedTemplate===tpl.id;
+                                        return (
+                                            <button key={tpl.id} onClick={()=>applyTemplate(tpl)}
+                                                className={`rounded-xl border-2 transition-all p-2.5 text-left ${isActive?'border-[#3f1efb] bg-[#f0effe] shadow-sm':'border-gray-200 hover:border-[#8a76f8] bg-white hover:shadow-sm'}`}>
+                                                {/* Mini preview: 5 tiny phone outlines showing the preset positions */}
+                                                <div className="flex items-end justify-center gap-px h-10 mb-1.5 overflow-hidden">
+                                                    {tpl.presets.slice(0, 5).map((pid, i) => {
+                                                        const p = POSITION_PRESETS.find(x=>x.id===pid);
+                                                        const v = p?.vals || {containerScale:1, containerX:0, containerY:0, shotRotate:0};
+                                                        const sc = 0.6 + (v.containerScale - 0.75) * 0.8;
+                                                        const ty = -v.containerY * 0.012;
+                                                        const rot = v.shotRotate || 0;
+                                                        return (
+                                                            <div key={i} className="flex-shrink-0" style={{
+                                                                width: 10*Math.min(1.2,Math.max(0.7,sc)),
+                                                                height: 18*Math.min(1.2,Math.max(0.7,sc)),
+                                                                border: `1.5px solid ${isActive?'#3f1efb':'#d1d5db'}`,
+                                                                borderRadius: 2,
+                                                                transform: `translateY(${ty}px) rotate(${rot}deg)`,
+                                                                background: isActive ? '#e0dbff' : '#f3f4f6',
+                                                            }}/>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <span className="text-[9px] font-bold text-gray-700 block leading-tight">{tpl.name}</span>
+                                                <span className="text-[7px] text-gray-400 block leading-tight mt-0.5">{tpl.desc}</span>
+                                                {isActive && <div className="mt-1 text-[7px] font-bold text-[#3f1efb]">Active</div>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </Accordion>
+                        </div>
+
                         {brandKit && (
                             <div className="mt-3 rounded-xl border border-gray-200 overflow-hidden">
                                 <div className="px-3 py-2 bg-gray-50">
@@ -920,8 +1435,6 @@ function App() {
                                         <p className="text-[10px] text-gray-400">No brand colors found in API response.</p>
                                     </div>
                                 )}
-
-                                {/* Suggest Colors */}
                                 {brandKit.allColors && Object.keys(brandKit.allColors).length > 0 && (
                                     <SuggestColors allColors={brandKit.allColors} onApplyBg={hex=>{updAll({backgroundColor:hex});setUseGrad(false);setBgImg(null);}} onApplyText={hex=>updAll({textColor:hex})} onApplyPair={(bg,tx)=>{updAll({backgroundColor:bg,textColor:tx});setUseGrad(false);setBgImg(null);}}/>
                                 )}
@@ -931,8 +1444,22 @@ function App() {
 
                     {/* Screenshot library */}
                     <div className="flex flex-col flex-1 overflow-hidden">
-                        {/* Thumbnails — top */}
                         <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
+
+                            {/* Manually select screen accordion — shown when collections available */}
+                            {appLinks && collections.length > 0 && (
+                                <div className="mb-3">
+                                    <Accordion title="✏️ Manually select screen" defaultOpen={false}>
+                                        <div className="px-3 pb-3 space-y-2">
+                                            <SearchSelect label="Collection (PLP)" items={collections} selected={selColl} onSelect={setSelColl}
+                                                query={collQ} onQueryChange={onCollQChange} searching={searchingC} displayKey="title" valueKey="handle"/>
+                                            <SearchSelect label="Product (PDP)" items={products} selected={selProd} onSelect={setSelProd}
+                                                query={prodQ} onQueryChange={onProdQChange} searching={searchingP} displayKey="title" valueKey="id"/>
+                                        </div>
+                                    </Accordion>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between mb-2">
                                 <span className="section-label mb-0">Screenshot Library</span>
                                 <button onClick={()=>libUploadRef.current?.click()}
@@ -941,7 +1468,25 @@ function App() {
                                 </button>
                             </div>
                             <input ref={libUploadRef} type="file" accept="image/*" multiple onChange={uploadLibImages} className="hidden"/>
-                            {library.length === 0 ? (
+                            {capturing ? (
+                                <div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[1,2,3,4].map(i => (
+                                            <div key={i} className="rounded-lg overflow-hidden" style={{aspectRatio:'9/19.5'}}>
+                                                <div className="w-full h-full bg-gray-100 animate-pulse" style={{animationDelay:`${i*150}ms`}}/>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1.5 mt-4">
+                                        <div className="flex gap-1">
+                                            {[0,1,2].map(i=>(
+                                                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#3f1efb] animate-bounce" style={{animationDelay:`${i*150}ms`}}/>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-[#3f1efb] font-semibold animate-pulse">{capProg || 'Capturing screenshots…'}</p>
+                                    </div>
+                                </div>
+                            ) : library.length === 0 ? (
                                 <div className="flex items-center justify-center py-8">
                                     <p className="text-xs text-gray-300 text-center leading-relaxed">No screenshots yet.<br/>Capture or upload to get started.</p>
                                 </div>
@@ -956,27 +1501,15 @@ function App() {
                                                 onDelete={()=>setLibrary(lib=>lib.filter(l=>l.id!==item.id))}/>
                                         ))}
                                     </div>
-                                    <p className="text-[10px] text-gray-400 text-center mt-3">Tap to assign to <span className="font-semibold text-indigo-500">Slot {activeIdx+1}</span></p>
+                                    <p className="text-[10px] text-gray-400 text-center mt-3">Tap to assign to <span className="font-semibold text-[#3f1efb]">{cur.label || `Slot ${activeIdx+1}`}</span></p>
                                 </>
                             )}
                         </div>
 
-                        {/* Capture controls — bottom */}
+                        {/* Capture controls */}
                         <div className="px-4 pb-4 pt-2 border-t border-gray-100 flex-shrink-0">
                             {appLinks ? (
                                 <div className="space-y-2">
-                                    {collections.length > 0 && (
-                                        <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 space-y-2">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wide">Override screenshot targets</span>
-                                            </div>
-                                            <SearchSelect label="Collection (Browse page)" items={collections} selected={selColl} onSelect={setSelColl}
-                                                query={collQ} onQueryChange={onCollQChange} searching={searchingC} displayKey="title" valueKey="handle"/>
-                                            <SearchSelect label="Product (Product page)" items={products} selected={selProd} onSelect={setSelProd}
-                                                query={prodQ} onQueryChange={onProdQChange} searching={searchingP} displayKey="title" valueKey="id"/>
-                                        </div>
-                                    )}
                                     {library.length === 0 ? (
                                         <Btn onClick={captureScreenshots} disabled={capturing} variant="primary" className="w-full">
                                             {capturing ? '⏳ Capturing…' : '📸 Capture'}
@@ -986,10 +1519,9 @@ function App() {
                                             {capturing ? '⏳ Capturing…' : '🔄 Re-capture'}
                                         </Btn>
                                     )}
-                                    {capProg && <p className="text-[10px] text-indigo-600 animate-pulse">{capProg}</p>}
-                                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[10px] text-amber-700 leading-relaxed space-y-1">
-                                        <div>🛒 <span className="font-semibold">Cart:</span> Upload manually via + Upload above.</div>
-                                        <div className="text-gray-400 border-t border-amber-100 pt-1">⚡ Microlink free tier: <span className="font-semibold">50 req/day per IP</span>. Each capture uses 3. If captures fail, the daily limit may be reached.</div>
+                                    {capProg && <p className="text-[10px] text-[#3f1efb] animate-pulse">{capProg}</p>}
+                                    <div className="rounded-lg bg-[#f0effe] border border-[#c4b9fc] px-3 py-2 text-[10px] text-[#2e14d5] leading-relaxed">
+                                        <div>🛒 <span className="font-semibold">Cart & Notifs:</span> Must be uploaded manually via + Upload above.</div>
                                     </div>
                                 </div>
                             ) : (
@@ -1000,53 +1532,52 @@ function App() {
                 </div>
 
                 {/* ── Right sidebar ── */}
-                <div className="w-64 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 order-3">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-
-                        {/* Slot selector */}
+                <div className="bg-white border-l border-gray-200 flex flex-col flex-shrink-0 order-3" style={{width:'320px'}}>
+                    {/* Tab bar */}
+                    <div className="flex border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                        {[['BG','bg'],['Screen','screen'],['Text','text'],['Elements','elements'],['Export','export']].map(([label,tab])=>(
+                            <button key={tab} onClick={()=>setSettingsTab(tab)}
+                                className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wide transition-colors ${settingsTab===tab?'border-b-2 border-[#3f1efb] text-[#3f1efb] bg-white':'text-gray-400 hover:text-gray-600'}`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Slot + Device always-visible header */}
+                    <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-b border-gray-100 bg-[#fdf9f1] space-y-2">
                         <div>
                             <span className="section-label">Active Slot</span>
-                            <div className="flex gap-1 flex-wrap mb-3">
+                            <div className="flex gap-1 flex-wrap">
                                 {screenshots.map((ss,i) => (
-                                    <button key={ss.id} onClick={()=>setActiveIdx(i)}
-                                        className={`w-9 h-9 rounded-lg text-xs font-semibold transition-colors ${activeIdx===i?'bg-indigo-600 text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                                        {ss.id}{ss.screenshotImage?'·':''}
+                                    <button key={ss.id} onClick={()=>switchScreen(i)}
+                                        className={`px-2.5 h-7 rounded-md text-[10px] font-semibold transition-colors ${activeIdx===i?'bg-[#3f1efb] text-white':'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                        {ss.label || ss.id}{ss.screenshotImage?' ✓':''}
                                     </button>
                                 ))}
                             </div>
-                            <div className="rounded-xl bg-indigo-50 border border-indigo-200 px-3 py-2.5 mt-1">
-                                <span className="section-label text-indigo-500 mb-1.5">Device</span>
-                                <select value={cur.deviceType} onChange={e=>updCur({deviceType:e.target.value})}
-                                    className="w-full px-2.5 py-2 border border-indigo-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 font-semibold text-indigo-700">
-                                    <option value="iphone">📱 iPhone</option>
-                                    <option value="android">🤖 Android</option>
-                                </select>
-                            </div>
-                            {cur.screenshotImage && (
-                                <div className="flex gap-1.5 mt-2">
-                                    <button
-                                        onClick={()=>{ setShotX(0); setShotY(0); }}
-                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
-                                        Reset crop
-                                    </button>
-                                    <button
-                                        onClick={()=>{ updCur({ containerX: 0, containerY: 0, containerScale: 1 }); }}
-                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
-                                        Reset container
-                                    </button>
-                                </div>
-                            )}
                         </div>
+                        <div>
+                            <span className="section-label">Device</span>
+                            <div className="flex gap-1 bg-white border border-gray-200 p-0.5 rounded-lg">
+                                {[['📱 iPhone','iphone'],['🤖 Android','android']].map(([label,val])=>(
+                                    <button key={val} onClick={()=>updCur({deviceType:val})}
+                                        className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-colors ${cur.deviceType===val?'bg-[#3f1efb] text-white shadow-sm':'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {/* Tab content */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
 
-                        <Accordion title="Background" defaultOpen={false}>
+                        {/* ── BG TAB ── */}
+                        {settingsTab==='bg' && (<>
                             <div>
-                                <span className="section-label">Type</span>
+                                <span className="section-label">Background Type</span>
                                 <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
                                     {[['Solid',!useGrad&&!bgImg],['Gradient',useGrad],['Image',!!bgImg]].map(([label,active],i)=>(
                                         <button key={label} onClick={()=>{if(i===0){setUseGrad(false);setBgImg(null);}else if(i===1){setUseGrad(true);setBgImg(null);}else bgImgRef.current?.click();}}
-                                            className={`flex-1 py-1 rounded-md text-[10px] font-semibold transition-colors ${active?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
+                                            className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-colors ${active?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
                                             {label}
                                         </button>
                                     ))}
@@ -1054,50 +1585,124 @@ function App() {
                                 <input ref={bgImgRef} type="file" accept="image/*" onChange={uploadBgImage} className="hidden"/>
                             </div>
                             {!useGrad&&!bgImg&&<ColorInput label="Color" value={cur.backgroundColor} onChange={v=>updCur({backgroundColor:v})}/>}
-                            {useGrad&&(
-                                <div className="grid grid-cols-2 gap-2">
-                                    <ColorInput label="Start" value={grad1} onChange={setGrad1}/>
-                                    <ColorInput label="End" value={grad2} onChange={setGrad2}/>
-                                </div>
-                            )}
-                            {bgImg&&<div><Slider label="Opacity" value={Math.round(bgOp*100)} onChange={v=>setBgOp(v/100)} min={10} max={100} unit="%"/><button onClick={()=>setBgImg(null)} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove image</button></div>}
-                            <button onClick={()=>{updAll({backgroundColor:cur.backgroundColor,textColor:cur.textColor});}}
-                                className="w-full py-1.5 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
-                                Apply colors to all slots
+                            {useGrad&&(<div><div className="grid grid-cols-2 gap-2"><ColorInput label="Start" value={grad1} onChange={setGrad1}/><ColorInput label="End" value={grad2} onChange={setGrad2}/></div><Slider label="Angle" value={gradAngle} onChange={setGradAngle} min={0} max={360} unit="°"/></div>)}
+                            {bgImg&&(<div><Slider label="Opacity" value={Math.round(bgOp*100)} onChange={v=>setBgOp(v/100)} min={10} max={100} unit="%"/><Slider label="Blur" value={bgBlur} onChange={setBgBlur} min={0} max={30} unit="px"/><ColorInput label="Overlay color" value={bgOverlay} onChange={setBgOverlay}/><Slider label="Overlay opacity" value={bgOverlayOp} onChange={setBgOverlayOp} min={0} max={100} unit="%"/><button onClick={()=>setBgImg(null)} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove image</button></div>)}
+                            <button onClick={()=>{applyToAllScreens();updAll({backgroundColor:cur.backgroundColor,textColor:cur.textColor});showToast('BG settings applied to all screens');}}
+                                className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors flex items-center justify-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                Apply BG settings to all screens
                             </button>
-                        </Accordion>
-
-                        <Accordion title="Text" forceOpen={openTextAccordion}>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <span className="section-label">Language</span>
-                                    <select value={lang} onChange={e=>changeLang(e.target.value)}
-                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                                        <option value="en">English</option><option value="es">Español</option>
-                                        <option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <span className="section-label">Case</span>
-                                    <select value={tCase} onChange={e=>setTCase(e.target.value)}
-                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                                        <option value="uppercase">UPPER</option><option value="lowercase">lower</option>
-                                        <option value="capitalize">Title</option><option value="none">None</option>
-                                    </select>
+                            <div className="border-t border-gray-100 pt-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <div onClick={()=>setNoise(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${noise?'bg-[#3f1efb]':'bg-gray-200'}`}>
+                                        <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${noise?'translate-x-4':'translate-x-0.5'}`}/>
+                                    </div>
+                                    <span className="text-xs text-gray-600 font-medium">Noise overlay</span>
+                                </label>
+                                <div className={noise?'mt-2':'mt-2 opacity-40 pointer-events-none'}>
+                                    <Slider label="Intensity" value={noiseInt} onChange={setNoiseInt} min={1} max={50} unit=""/>
                                 </div>
                             </div>
-                            <ColorInput label="Text color" value={cur.textColor} onChange={v=>updCur({textColor:v})}/>
-                            <input type="text" value={cur.headline} onChange={e=>updCur({headline:e.target.value})}
-                                placeholder="Headline"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
-                            <textarea value={cur.subheadline} onChange={e=>updCur({subheadline:e.target.value})}
-                                placeholder="Subheadline"
-                                rows={2}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"/>
-                        </Accordion>
+                        </>)}
 
-                        <Accordion title="Typography">
-                            <div className="grid grid-cols-2 gap-2 mb-1">
+                        {/* ── SCREEN TAB ── */}
+                        {settingsTab==='screen' && (<>
+                            {cur.screenshotImage && (
+                                <div className="flex gap-1.5">
+                                    <button onClick={()=>{ setShotX(0); setShotY(0); }}
+                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                        ↺ Reset crop
+                                    </button>
+                                    <button onClick={()=>{ updCur({ containerX: 0, containerY: 0, containerScale: 1 }); setShotRotate(0); }}
+                                        className="flex-1 py-1.5 text-[10px] font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                        ↺ Reset frame
+                                    </button>
+                                </div>
+                            )}
+                            <Accordion title="Position Presets" defaultOpen={true}>
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {POSITION_PRESETS.map(p => (
+                                        <button key={p.id} onClick={()=>applyPreset(p)}
+                                            className={`rounded-lg border-2 transition-all text-center py-2 px-1 ${selectedPreset===p.id?'border-[#3f1efb] bg-[#f0effe]':'border-gray-200 hover:border-[#8a76f8] bg-white'}`}>
+                                            <div className="text-lg leading-none mb-0.5 text-gray-500" style={{fontFamily:'monospace'}}>{p.icon}</div>
+                                            <span className="text-[7px] font-bold text-gray-600 block leading-tight">{p.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedPreset && (
+                                    <button onClick={()=>{const p=POSITION_PRESETS.find(x=>x.id===selectedPreset);if(p)applyPresetToAll(p);}}
+                                        className="w-full mt-2 py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors flex items-center justify-center gap-1">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                        Apply preset to all screens
+                                    </button>
+                                )}
+                            </Accordion>
+
+                            <Accordion title="Position & Scale" defaultOpen={true}>
+                                <Slider label="Scale" value={Math.round((cur.containerScale||1)*100)} onChange={v=>updCur({containerScale:v/100})} min={30} max={200} unit="%"/>
+                                <Slider label="Horizontal" value={Math.round(cur.containerX||0)} onChange={v=>updCur({containerX:v})} min={-600} max={600} unit="px"/>
+                                <Slider label="Vertical" value={Math.round(cur.containerY||0)} onChange={v=>updCur({containerY:v})} min={-600} max={600} unit="px"/>
+                            </Accordion>
+                            <Accordion title="Tilt / Rotation" defaultOpen={false}>
+                                <Slider label="Rotation" value={shotRotate} onChange={setShotRotate} min={-45} max={45} unit="°"/>
+                            </Accordion>
+                            <Accordion title="Corner Radius" defaultOpen={false}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] text-gray-400 flex-shrink-0">Auto</span>
+                                    <input type="checkbox" checked={cornerR<0} onChange={e=>{if(e.target.checked)setCornerR(-1);else setCornerR(60);}} className="w-3.5 h-3.5 rounded accent-[#3f1efb]"/>
+                                </div>
+                                {cornerR>=0&&<Slider label="Radius" value={cornerR} onChange={setCornerR} min={0} max={200} unit="px"/>}
+                                {cornerR<0&&<p className="text-[10px] text-gray-400">Using device default radius</p>}
+                            </Accordion>
+                            <Accordion title="Drop Shadow" defaultOpen={false}>
+                                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                    <div onClick={()=>setShadow(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${shadow?'bg-[#3f1efb]':'bg-gray-200'}`}>
+                                        <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${shadow?'translate-x-4':'translate-x-0.5'}`}/>
+                                    </div>
+                                    <span className="text-xs text-gray-600 font-medium">Enable</span>
+                                </label>
+                                <div className={shadow?'':'opacity-40 pointer-events-none'}>
+                                    <ColorInput label="Shadow color" value={sColor} onChange={setSColor}/>
+                                    <Slider label="Blur" value={sBlur} onChange={setSBlur} min={0} max={100} unit=""/>
+                                    <Slider label="Opacity" value={Math.round(sOp*100)} onChange={v=>setSOp(v/100)} min={0} max={100} unit="%"/>
+                                    <Slider label="Offset X" value={sOffX} onChange={setSOffX} min={-100} max={100} unit=""/>
+                                    <Slider label="Offset Y" value={sOffY} onChange={setSOffY} min={-100} max={100} unit=""/>
+                                </div>
+                            </Accordion>
+                            <button onClick={()=>{applyToAllScreens();showToast('Screen settings applied to all screens');}}
+                                className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors flex items-center justify-center gap-1 mt-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                Apply screen settings to all
+                            </button>
+                        </>)}
+
+                        {/* ── TEXT TAB ── */}
+                        {settingsTab==='text' && (<>
+                            {/* Global text options */}
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                    <span className="section-label">Case</span>
+                                    <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
+                                        {[['UPPER','uppercase'],['lower','lowercase'],['Title','capitalize'],['Aa','none']].map(([l,v])=>(
+                                            <button key={v} onClick={()=>setTCase(v)}
+                                                className={`flex-1 py-1 rounded-md text-[9px] font-semibold transition-colors ${tCase===v?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
+                                                {l}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="section-label">Color</span>
+                                    <div className="flex items-center gap-1">
+                                        <input type="color" value={cur.textColor} onChange={e=>updCur({textColor:e.target.value})}
+                                            className="w-7 h-7 rounded border border-gray-200 p-0.5 cursor-pointer"/>
+                                        <span className="text-[9px] font-mono text-gray-400">{cur.textColor}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Font uploads */}
+                            <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <span className="section-label">Headline font</span>
                                     <input ref={hFontRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={e=>uploadFont(e,true)} className="hidden"/>
@@ -1115,36 +1720,181 @@ function App() {
                                     </button>
                                 </div>
                             </div>
-                            <span className="section-label">Headline</span>
-                            {[{l:'Size',v:hSize,s:setHSize,min:10,max:120},{l:'Position Y',v:hY,s:setHY,min:30,max:2600},{l:'Letter spacing',v:hSp,s:setHSp,min:-10,max:50},{l:'Margin',v:hMg,s:setHMg,min:0,max:300}].map(({l,v,s,min,max})=>(
-                                <Slider key={l} label={l} value={v} onChange={s} min={min} max={max}/>
-                            ))}
-                            <span className="section-label mt-2">Subheadline</span>
-                            {[{l:'Size',v:sSize,s:setSSize,min:10,max:120},{l:'Position Y',v:sY,s:setSY,min:30,max:2600},{l:'Letter spacing',v:sSp,s:setSSp,min:-10,max:50},{l:'Margin',v:sMg,s:setSMg,min:0,max:300}].map(({l,v,s,min,max})=>(
-                                <Slider key={l} label={l} value={v} onChange={s} min={min} max={max}/>
-                            ))}
-                        </Accordion>
 
-                        <Accordion title="Drop Shadow">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <div onClick={()=>setShadow(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${shadow?'bg-indigo-600':'bg-gray-200'}`}>
-                                    <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${shadow?'translate-x-4':'translate-x-0.5'}`}/>
+                            {/* Headline section */}
+                            <Accordion title="Headline" defaultOpen={false}>
+                                <div className="relative">
+                                    <input type="text" value={cur.headline} onChange={e=>updCur({headline:e.target.value})}
+                                        placeholder="Headline text"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3f1efb] pr-16"/>
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                                        {[['B','bold'],['M','500'],['R','normal']].map(([l,w])=>(
+                                            <button key={w} onClick={()=>setHWeight(w)}
+                                                className={`w-5 h-5 rounded text-[8px] font-bold transition-colors ${hWeight===w?'bg-[#3f1efb] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                                {l}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <span className="text-xs text-gray-600">Enable shadow</span>
-                            </label>
-                            <div className={shadow?'':'opacity-40 pointer-events-none'}>
-                                <ColorInput label="Shadow color" value={sColor} onChange={setSColor}/>
-                                <Slider label="Blur" value={sBlur} onChange={setSBlur} min={0} max={100} unit=""/>
-                                <Slider label="Opacity" value={Math.round(sOp*100)} onChange={v=>setSOp(v/100)} min={0} max={100} unit="%"/>
-                                <Slider label="Offset Y" value={sOffY} onChange={setSOffY} min={0} max={100} unit=""/>
-                            </div>
-                        </Accordion>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[9px] text-gray-400 flex-shrink-0">Weight</span>
+                                    <select value={hWeight} onChange={e=>setHWeight(e.target.value)}
+                                        className="flex-1 px-1.5 py-1 border border-gray-200 rounded text-[10px] bg-white focus:outline-none focus:ring-1 focus:ring-[#3f1efb]">
+                                        <option value="100">Thin</option><option value="300">Light</option><option value="normal">Regular</option>
+                                        <option value="500">Medium</option><option value="600">Semi</option><option value="bold">Bold</option>
+                                        <option value="800">Extrabold</option><option value="900">Black</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1">
+                                    <Slider label="Size" value={hSize} onChange={setHSize} min={10} max={120}/>
+                                    <Slider label="Y Position" value={hY} onChange={setHY} min={30} max={2600}/>
+                                    <Slider label="Spacing" value={hSp} onChange={setHSp} min={-10} max={50}/>
+                                    <Slider label="Margin" value={hMg} onChange={setHMg} min={0} max={300}/>
+                                </div>
+                            </Accordion>
 
-                        <Accordion title="Export">
+                            {/* Subheadline section */}
+                            <Accordion title="Subheadline" defaultOpen={false}>
+                                <div className="relative">
+                                    <textarea value={cur.subheadline} onChange={e=>updCur({subheadline:e.target.value})}
+                                        placeholder="Subheadline text" rows={2}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] resize-none pr-16"/>
+                                    <div className="absolute right-1 top-2 flex gap-0.5">
+                                        {[['B','bold'],['M','500'],['R','normal']].map(([l,w])=>(
+                                            <button key={w} onClick={()=>setSWeight(w)}
+                                                className={`w-5 h-5 rounded text-[8px] font-bold transition-colors ${sWeight===w?'bg-[#3f1efb] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                                {l}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[9px] text-gray-400 flex-shrink-0">Weight</span>
+                                    <select value={sWeight} onChange={e=>setSWeight(e.target.value)}
+                                        className="flex-1 px-1.5 py-1 border border-gray-200 rounded text-[10px] bg-white focus:outline-none focus:ring-1 focus:ring-[#3f1efb]">
+                                        <option value="100">Thin</option><option value="300">Light</option><option value="normal">Regular</option>
+                                        <option value="500">Medium</option><option value="600">Semi</option><option value="bold">Bold</option>
+                                        <option value="800">Extrabold</option><option value="900">Black</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1">
+                                    <Slider label="Size" value={sSize} onChange={setSSize} min={10} max={120}/>
+                                    <Slider label="Y Position" value={sY} onChange={setSY} min={30} max={2600}/>
+                                    <Slider label="Spacing" value={sSp} onChange={setSSp} min={-10} max={50}/>
+                                    <Slider label="Margin" value={sMg} onChange={setSMg} min={0} max={300}/>
+                                </div>
+                            </Accordion>
+
+                            <button onClick={()=>{applyToAllScreens();showToast('Text settings applied to all screens');}}
+                                className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors flex items-center justify-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                Apply text settings to all
+                            </button>
+                        </>)}
+
+                        {/* ── ELEMENTS TAB ── */}
+                        {settingsTab==='elements' && (<>
+                            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                                {[['😀  Emoji','emoji'],['☆  Icon','icon'],['🖼  Image','image']].map(([label,val])=>(
+                                    <button key={val} onClick={()=>{setElemTab(val);setElemSearch('');}}
+                                        className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-colors ${elemTab===val?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                            {elemTab!=='image' && (
+                            <div className="relative">
+                                <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" value={elemSearch} onChange={e=>setElemSearch(e.target.value.toLowerCase())}
+                                    placeholder={elemTab==='emoji'?'Search emojis…':'Search icons…'}
+                                    className="w-full pl-7 pr-2 py-1.5 border border-gray-200 rounded-lg text-[11px] focus:outline-none focus:ring-2 focus:ring-[#3f1efb]"/>
+                            </div>
+                            )}
+                            {elemTab==='emoji' && (
+                                <div className="grid grid-cols-8 gap-0.5 max-h-44 overflow-y-auto bg-gray-50 rounded-lg p-1.5">
+                                    {EMOJI_LIST.filter(em=>!elemSearch||em.includes(elemSearch)).map(em=>(
+                                        <button key={em} title={em}
+                                            onClick={()=>setElements(els=>[...els,{id:Date.now(),type:'emoji',content:em,x:50,y:13,size:80}])}
+                                            className="text-lg p-0.5 hover:bg-white rounded transition-colors flex items-center justify-center leading-none">
+                                            {em}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {elemTab==='icon' && (
+                                <div>
+                                    <div className="flex gap-1 mb-1.5">
+                                        {[['Popular','popular'],['All','all']].map(([l,v])=>(
+                                            <button key={v} onClick={()=>setIconTab(v)}
+                                                className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold transition-colors ${iconTab===v?'bg-[#3f1efb] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{l}</button>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-1 max-h-44 overflow-y-auto bg-gray-50 rounded-lg p-1.5">
+                                        {ICON_DATA
+                                            .filter(ic=>(iconTab==='popular'?ic.pop:true)&&(!elemSearch||ic.n.includes(elemSearch)))
+                                            .map(ic=>(
+                                                <button key={ic.n} title={ic.n}
+                                                    onClick={()=>setElements(els=>[...els,{id:Date.now(),type:'icon',content:ic.n,svgPath:ic.p,x:50,y:13,size:80,color:'#ffffff'}])}
+                                                    className="p-1.5 hover:bg-white rounded transition-colors flex items-center justify-center">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:ic.p}}/>
+                                                </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {elemTab==='image' && (
+                                <div className="space-y-2">
+                                    <input ref={elemImgRef} type="file" accept="image/*" onChange={uploadElemImage} className="hidden"/>
+                                    <button onClick={()=>elemImgRef.current?.click()}
+                                        className="w-full py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#3f1efb] hover:bg-[#faf9ff] transition-colors flex flex-col items-center gap-1.5 cursor-pointer">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                                        </svg>
+                                        <span className="text-[10px] font-semibold text-gray-500">Upload Image</span>
+                                        <span className="text-[8px] text-gray-400">PNG, JPG, SVG, WebP</span>
+                                    </button>
+                                    <p className="text-[9px] text-gray-400 text-center">Upload logos, badges, stickers, or any image to overlay on your screenshots.</p>
+                                </div>
+                            )}
+                            {elements.length===0
+                                ? <p className="text-[10px] text-gray-400 text-center py-1">{elemTab==='image'?'Upload an image above to add it':'Click an emoji or icon above to add it'}</p>
+                                : elements.map(el=>(
+                                    <div key={el.id} className="bg-gray-50 rounded-lg p-2 space-y-1 border border-gray-100">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                            <div className="flex items-center gap-1.5">
+                                                {el.type==='icon'
+                                                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={el.color||'#3f1efb'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:el.svgPath}}/>
+                                                    : el.type==='image'
+                                                    ? <img src={el.src} className="w-5 h-5 object-contain rounded" alt=""/>
+                                                    : <span className="text-base leading-none">{el.content}</span>
+                                                }
+                                                <span className="text-[9px] text-gray-500 capitalize">{el.content}</span>
+                                            </div>
+                                            <button onClick={()=>setElements(els=>els.filter(e=>e.id!==el.id))}
+                                                className="text-[9px] font-bold text-red-400 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-red-50">✕</button>
+                                        </div>
+                                        {el.type==='icon' && <ColorInput label="Color" value={el.color||'#ffffff'} onChange={v=>setElements(els=>els.map(e=>e.id===el.id?{...e,color:v}:e))}/>}
+                                        <Slider label="Size" value={el.size} onChange={v=>setElements(els=>els.map(e=>e.id===el.id?{...e,size:v}:e))} min={20} max={600} unit="px"/>
+                                        <Slider label="X" value={el.x} onChange={v=>setElements(els=>els.map(e=>e.id===el.id?{...e,x:v}:e))} min={0} max={100} unit="%"/>
+                                        <Slider label="Y" value={el.y} onChange={v=>setElements(els=>els.map(e=>e.id===el.id?{...e,y:v}:e))} min={0} max={100} unit="%"/>
+                                    </div>
+                                ))
+                            }
+                            {elements.length>0 && (
+                                <button onClick={()=>{applyToAllScreens();showToast('Elements applied to all screens');}}
+                                    className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors flex items-center justify-center gap-1">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                    Apply elements to all
+                                </button>
+                            )}
+                        </>)}
+
+                        {/* ── EXPORT TAB ── */}
+                        {settingsTab==='export' && (<>
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="section-label mb-0">Include in download</span>
-                                    <button onClick={toggleAllSlots} className="text-[9px] font-semibold text-indigo-500 hover:text-indigo-700">
+                                    <button onClick={toggleAllSlots} className="text-[9px] font-semibold text-[#3f1efb] hover:text-[#2e14d5]">
                                         {selectedSlots.size === screenshots.length ? 'Deselect all' : 'Select all'}
                                     </button>
                                 </div>
@@ -1154,17 +1904,17 @@ function App() {
                                         return (
                                             <div key={ss.id} className="relative group">
                                                 <button onClick={()=>toggleSlot(ss.id)}
-                                                    className={`relative w-full rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-indigo-500 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
+                                                    className={`relative w-full rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-[#3f1efb] shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
                                                     style={{aspectRatio:'1242/2688'}}>
                                                     {ss.screenshotImage
                                                         ? <img src={ss.screenshotImage} className="w-full h-full object-cover object-top"/>
-                                                        : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><span className="text-gray-300 text-[10px] font-bold">{ss.id}</span></div>
+                                                        : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><span className="text-gray-300 text-[9px] font-bold text-center px-1">{ss.label||ss.id}</span></div>
                                                     }
-                                                    <div className={`absolute inset-0 transition-opacity ${isSelected?'bg-indigo-600/20':'bg-transparent'}`}/>
-                                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected?'bg-indigo-500 border-indigo-500':'bg-white/80 border-gray-300'}`}>
+                                                    <div className={`absolute inset-0 transition-opacity ${isSelected?'bg-[#3f1efb]/20':'bg-transparent'}`}/>
+                                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSelected?'bg-[#3f1efb] border-[#3f1efb]':'bg-white/80 border-gray-300'}`}>
                                                         {isSelected && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                                                     </div>
-                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 py-0.5 text-center text-white text-[8px] font-bold">{ss.id}</div>
+                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 py-0.5 text-center text-white text-[7px] font-bold">{ss.label||ss.id}</div>
                                                 </button>
                                                 <button onClick={()=>removeSlot(ss.id)}
                                                     className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-bold items-center justify-center hidden group-hover:flex shadow">×</button>
@@ -1172,7 +1922,7 @@ function App() {
                                         );
                                     })}
                                     <button onClick={addSlot}
-                                        className="rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 flex items-center justify-center transition-colors text-gray-400 hover:text-indigo-500"
+                                        className="rounded-lg border-2 border-dashed border-gray-300 hover:border-[#3f1efb] hover:bg-[#f0effe] flex items-center justify-center transition-colors text-gray-400 hover:text-[#3f1efb]"
                                         style={{aspectRatio:'1242/2688'}}>
                                         <span className="text-lg font-light">+</span>
                                     </button>
@@ -1182,7 +1932,8 @@ function App() {
                             <Btn onClick={()=>download(cur)} disabled={!cur.screenshotImage} variant="default" className="w-full">Download this slot</Btn>
                             <Btn onClick={downloadAll} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="ghost" className="w-full">Download selected (current device)</Btn>
                             <Btn onClick={downloadBoth} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="primary" className="w-full">Download selected — iOS + Android</Btn>
-                        </Accordion>
+                        </>)}
+
                     </div>
                 </div>
 
@@ -1191,17 +1942,26 @@ function App() {
                     <div className="bg-white border-b border-gray-200 px-4 flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center">
                             {screenshots.map((ss,i)=>(
-                                <button key={ss.id} onClick={()=>setActiveIdx(i)}
-                                    className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeIdx===i?'border-indigo-600 text-indigo-600':'border-transparent text-gray-400 hover:text-gray-700'}`}>
-                                    {ss.id}{ss.screenshotImage?' ✓':''}
+                                <button key={ss.id} onClick={()=>switchScreen(i)}
+                                    className={`px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${activeIdx===i?'border-[#3f1efb] text-[#3f1efb]':'border-transparent text-gray-400 hover:text-gray-700'}`}>
+                                    {ss.label || ss.id}{ss.screenshotImage?' ✓':''}
                                 </button>
                             ))}
-                            <button onClick={addSlot} className="ml-1 px-2 py-2 text-gray-400 hover:text-indigo-500 text-base leading-none" title="Add slot">+</button>
+                            <button onClick={addSlot} className="ml-1 px-2 py-2 text-gray-400 hover:text-[#3f1efb] text-base leading-none" title="Add slot">+</button>
                         </div>
-                        <label className="flex items-center gap-1.5 cursor-pointer select-none pr-1">
-                            <input type="checkbox" checked={guides} onChange={e=>setGuides(e.target.checked)} className="w-3.5 h-3.5 rounded"/>
-                            <span className="text-xs text-gray-500 font-medium">Guides</span>
-                        </label>
+                        <div className="flex items-center gap-3 pr-1">
+                            {screenshots.some(s=>s.screenshotImage) && (
+                                <button onClick={openAllPreview}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3f1efb] hover:bg-[#2e14d5] text-white rounded-lg text-[10px] font-bold transition-colors">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="3" width="7" height="18" rx="1"/><rect x="9.5" y="3" width="5" height="18" rx="1"/><rect x="15" y="3" width="7" height="18" rx="1"/></svg>
+                                    View All
+                                </button>
+                            )}
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                <input type="checkbox" checked={guides} onChange={e=>setGuides(e.target.checked)} className="w-3.5 h-3.5 rounded"/>
+                                <span className="text-xs text-gray-500 font-medium">Guides</span>
+                            </label>
+                        </div>
                     </div>
                     {canDragShot && cur.screenshotImage && (
                         <div className="flex items-center justify-between px-4 py-2 bg-emerald-500 text-white text-xs font-semibold flex-shrink-0">
@@ -1214,20 +1974,85 @@ function App() {
                             <span>🖱️ Container mode — drag screenshot frame to reposition. Double-click frame to enter crop mode.</span>
                         </div>
                     )}
-                    <div className="flex-1 overflow-auto flex items-start justify-center p-10">
+                    <div ref={canvasContainerRef} className="flex-1 overflow-hidden flex items-center justify-center p-8">
                         <div>
                             <canvas ref={canvasRef}
                                 onDoubleClick={onDblClick} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}
                                 style={{
-                                    width:`${spec.cw*PREVIEW_SCALE}px`,height:`${spec.ch*PREVIEW_SCALE}px`,
+                                    width:`${spec.cw*previewScale}px`,height:`${spec.ch*previewScale}px`,
                                     borderRadius:'20px',boxShadow:'0 25px 50px -12px rgba(0,0,0,0.25)',
-                                    cursor:dragHl||dragSub||dragCont||dragShot?'grabbing':dragHnd?'nwse-resize':canDragShot?'move':'default',
+                                    cursor:dragHl||dragSub||dragCont||dragShot||dragElem?'grabbing':dragHnd?'nwse-resize':canDragShot?'move':elements.length?'crosshair':'default',
                                 }}/>
-                            <p className="text-[10px] text-gray-400 mt-3 text-center">{spec.cw}×{spec.ch}px — drag to reposition · ↑↓ keys to crop image (shift for larger steps)</p>
+                            <p className="text-[10px] text-gray-400 mt-3 text-center">{spec.cw}×{spec.ch}px · {cur.label || `Slot ${activeIdx+1}`} · drag to reposition · ↑↓ keys to crop (shift = larger steps)</p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* ── View All Preview Overlay ── */}
+            {showAllPreview && (
+                <div className="fixed inset-0 z-50 flex flex-col" style={{background:'rgba(15,12,15,0.96)'}}>
+                    {/* Overlay header */}
+                    <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                            <span className="font-bold text-white text-sm tracking-wide uppercase">All Screens Preview</span>
+                            <span className="text-[10px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">{allPreviews.length} of {screenshots.length} slots</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Btn onClick={downloadAll} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="ghost">⬇ Download selected</Btn>
+                            <Btn onClick={downloadBoth} disabled={screenshots.every(s=>!s.screenshotImage)||selectedSlots.size===0} variant="primary">⬇ iOS + Android ZIP</Btn>
+                            <button onClick={()=>setShowAllPreview(false)}
+                                className="ml-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs font-semibold transition-colors">
+                                ✕ Close
+                            </button>
+                        </div>
+                    </div>
+                    {/* Screens row */}
+                    <div className="flex-1 overflow-auto flex items-center justify-start gap-6 px-10 py-8">
+                        {allPreviews.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="text-gray-400 text-sm animate-pulse">Rendering previews…</div>
+                            </div>
+                        ) : allPreviews.map(p => (
+                            <div key={p.id} className="flex-shrink-0 flex flex-col items-center gap-3">
+                                <img src={p.dataURL}
+                                    style={{height:'72vh',width:'auto',borderRadius:'22px',boxShadow:'0 24px 64px rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.08)'}}/>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-white text-xs font-semibold opacity-80">{p.label}</span>
+                                    <button onClick={()=>{ const a=document.createElement('a');a.href=p.dataURL;a.download=`${p.label}.png`;a.click(); }}
+                                        className="text-[9px] px-2 py-0.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors font-medium">
+                                        ↓ Save
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {/* Empty slots that weren't captured */}
+                        {screenshots.filter(s=>!s.screenshotImage).map(s=>(
+                            <div key={s.id} className="flex-shrink-0 flex flex-col items-center gap-3">
+                                <div style={{height:'72vh',aspectRatio:'1242/2688',borderRadius:'22px',border:'2px dashed rgba(255,255,255,0.12)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <div className="text-center px-4">
+                                        <p className="text-gray-600 text-xs font-semibold">{s.label}</p>
+                                        <p className="text-gray-700 text-[9px] mt-1">No screenshot</p>
+                                    </div>
+                                </div>
+                                <span className="text-gray-600 text-xs font-semibold">{s.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ── TOAST NOTIFICATION ── */}
+            {toast && (
+                <div style={{position:'fixed',bottom:32,left:'50%',transform:'translateX(-50%)',zIndex:9999,
+                    animation:'toastIn .25s ease-out'}}
+                    className="bg-gray-900 text-white px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-semibold">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    {toast}
+                </div>
+            )}
         </div>
     );
 }
