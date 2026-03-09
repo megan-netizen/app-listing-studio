@@ -824,11 +824,11 @@ function App() {
         const plpUrl = links.plpBase&&useColl ? `${links.plpBase}?collectionHandle=${useColl}` : links.plpBase;
 
         const slots = [
-            {url:links.home,               label:'Home',        waitFor:7000, scroll:true},
-            {url:links.collectionsListBase,label:'Collections', waitFor:6000, scroll:true},
-            {url:plpUrl,                   label:'PLP',         waitFor:7000, scroll:true},
-            {url:pdpUrl,                   label:'PDP',         waitFor:6000, scroll:true},
-            {url:links.account,            label:'Account',     waitFor:6000, scroll:true},
+            {url:links.home,               label:'Home',        waitFor:2500, scroll:true},
+            {url:links.collectionsListBase,label:'Collections', waitFor:2000, scroll:true},
+            {url:plpUrl,                   label:'PLP',         waitFor:2500, scroll:true},
+            {url:pdpUrl,                   label:'PDP',         waitFor:2000, scroll:true},
+            {url:links.account,            label:'Account',     waitFor:2000, scroll:true},
         ];
         const validSlots = slots.filter(s=>s.url);
         setCapProg(`Capturing ${validSlots.length} screens in parallel…`);
