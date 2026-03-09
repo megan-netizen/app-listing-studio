@@ -588,8 +588,18 @@ function App() {
     const applyToAllScreens = () => {
         const cfg = getCurrentConfig();
         for (let i=0; i<screenshots.length; i++) {
-            configsRef.current[i] = {...cfg, elements: cfg.elements.map(e=>({...e}))};
+            const existing = configsRef.current[i] || {...DEFAULT_CONFIG, elements:[]};
+            configsRef.current[i] = {
+                ...cfg,
+                // Preserve per-screen crop positions
+                shotX: existing.shotX,
+                shotY: existing.shotY,
+                shotRotate: existing.shotRotate,
+                elements: cfg.elements.map(e=>({...e})),
+            };
         }
+        // Restore the active screen's own crop values back
+        configsRef.current[activeIdx] = {...cfg, elements: cfg.elements.map(e=>({...e}))};
     };
 
     const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
@@ -880,6 +890,67 @@ function App() {
     const captureScreenshots   = () => runCapture({clearFirst:false});
     const recaptureScreenshots = () => runCapture({clearFirst:true});
 
+    // Only recapture PLP + PDP with the manually selected collection/product
+    const recaptureManualScreens = async () => {
+        if (!appLinks) { alert('Load an app first'); return; }
+        setCapturing(true);
+        const useColl = selColl;
+        const useProd = selProd;
+        if (!useColl && !useProd) { alert('Select a collection or product first.'); setCapturing(false); return; }
+        const pdpUrl = appLinks.pdpBase&&useProd ? `${appLinks.pdpBase}?productId=${useProd}` : null;
+        const plpUrl = appLinks.plpBase&&useColl ? `${appLinks.plpBase}?collectionHandle=${useColl}` : null;
+
+        const slots = [
+            plpUrl ? {url:plpUrl, label:'PLP', waitFor:5000, scroll:true} : null,
+            pdpUrl ? {url:pdpUrl, label:'PDP', waitFor:4000, scroll:true} : null,
+        ].filter(Boolean);
+
+        if (slots.length===0) { alert('No PLP or PDP URL to capture. Select a collection or product.'); setCapturing(false); return; }
+
+        let done = 0, captured = 0;
+        let nextId = libCounter + 1;
+        setCapProg(`Recapturing… 0 of ${slots.length}`);
+
+        const captureOne = async (slot) => {
+            console.log(`[Tapcart] 📸 Recapturing ${slot.label}:`, slot.url);
+            try {
+                const res = await fetch('/api/screenshot-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: slot.url,
+                        waitFor: slot.waitFor,
+                        scrollAndBack: !!slot.scroll,
+                    }),
+                });
+                const data = await res.json();
+                if (!data.ok || !data.image) {
+                    console.warn(`[Tapcart] ⏭️ No screenshot for ${slot.label}:`, data.error);
+                    done++;
+                    setCapProg(`Recapturing… ${done} of ${slots.length}`);
+                    return null;
+                }
+                const id = nextId++; setLibCounter(id);
+                setLibrary(lib=>[...lib, {id, label:slot.label, dataUrl:data.image}]);
+                setScreenshots(ss=>ss.map(s=>s.label===slot.label?{...s,screenshotImage:data.image,containerScale:1,containerX:0,containerY:0}:s));
+                captured++;
+                done++;
+                setCapProg(`Recapturing… ${done} of ${slots.length}`);
+                return { label: slot.label, dataUrl: data.image };
+            } catch(err) {
+                console.error(slot.label, err);
+                done++;
+                setCapProg(`Recapturing… ${done} of ${slots.length}`);
+                return null;
+            }
+        };
+
+        await Promise.all(slots.map(captureOne));
+        setCapProg(''); setCapturing(false);
+        if (captured>0) alert(`✅ ${captured} screen${captured>1?'s':''} recaptured!`);
+        else alert('❌ No screenshots captured.');
+    };
+
     const uploadFont = async (e, isH) => {
         const file=e.target.files[0]; if(!file) return;
         const reader=new FileReader();
@@ -950,6 +1021,17 @@ function App() {
     const roundRect=(ctx,x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
     const wrapText=(ctx,text,x,y,maxW,spacing,lh)=>{const words=text.split(' ');let line='',lines=[];for(let n=0;n<words.length;n++){const test=line+words[n]+' ';const w=spacing!==0?test.split('').reduce((s,c)=>s+ctx.measureText(c).width+spacing,0)-spacing:ctx.measureText(test).width;if(w>maxW&&n>0){lines.push(line);line=words[n]+' ';}else line=test;}lines.push(line);const startY=y-((lines.length-1)*lh)/2;lines.forEach((ln,i)=>{const ly=startY+i*lh;if(spacing!==0){const chars=ln.trim().split('');let tw=0;const cws=chars.map(c=>{const cw=ctx.measureText(c).width;tw+=cw+spacing;return cw;});tw-=spacing;let cx=x-tw/2;chars.forEach((c,j)=>{ctx.fillText(c,cx+cws[j]/2,ly);cx+=cws[j]+spacing;});}else ctx.fillText(ln.trim(),x,ly);});};
 
+    const imgCacheRef = useRef({});
+    const loadCachedImage = (src) => {
+        if (imgCacheRef.current[src]) return Promise.resolve(imgCacheRef.current[src]);
+        return new Promise((res, rej) => {
+            const img = new Image();
+            img.onload = () => { imgCacheRef.current[src] = img; res(img); };
+            img.onerror = rej;
+            img.src = src;
+        });
+    };
+
     const renderToCanvas=async(ss,canvas,cfg)=>{
         if(!canvas) return;
         const C = cfg || getCurrentConfig();
@@ -961,7 +1043,7 @@ function App() {
         const ctx=canvas.getContext('2d'),sp=DEVICE_SPECS[ss.deviceType];
         canvas.width=sp.cw;canvas.height=sp.ch;
         if(C.bgImg){
-            const img=new Image();img.src=C.bgImg;await new Promise(r=>{img.onload=r;img.onerror=r;});
+            const img=await loadCachedImage(C.bgImg);
             if(C.bgBlur>0)ctx.filter=`blur(${C.bgBlur}px)`;
             ctx.globalAlpha=C.bgOp;
             const sc=Math.max(sp.cw/img.width,sp.ch/img.height);
@@ -988,7 +1070,7 @@ function App() {
         ctx.font=`${C.hWeight} ${aH}px ${hFam}`;wrapText(ctx,_ac(ss.headline),sp.cw/2,C.hY,sp.cw-C.hMg*2,C.hSp,aH*1.2);
         ctx.font=`${C.sWeight} ${aS}px ${sFam}`;wrapText(ctx,_ac(ss.subheadline),sp.cw/2,C.sY,sp.cw-C.sMg*2,C.sSp,aS*1.2);
         if(ss.screenshotImage){
-            const img=new Image();img.src=ss.screenshotImage;await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
+            const img=await loadCachedImage(ss.screenshotImage);
             const cw=sp.dw*ss.containerScale,ch=sp.dh*ss.containerScale;
             const cx=(sp.cw-cw)/2+ss.containerX,cy=sp.dy+ss.containerY;
             const cr=(C.cornerR>=0?C.cornerR:sp.cr)*ss.containerScale;
@@ -1007,7 +1089,7 @@ function App() {
         for(const el of(C.elements||[])){
             const ex=el.x/100*sp.cw,ey=el.y/100*sp.ch;
             ctx.save();ctx.translate(ex,ey);
-            if(el.type==='image'&&el.src){const sz=el.size||200;const img=new Image();img.src=el.src;await new Promise(r=>{img.onload=r;img.onerror=r;});const asp=img.width/img.height;const dw=asp>=1?sz:sz*asp,dh=asp>=1?sz/asp:sz;ctx.drawImage(img,-dw/2,-dh/2,dw,dh);}
+            if(el.type==='image'&&el.src){const sz=el.size||200;const img=await loadCachedImage(el.src);const asp=img.width/img.height;const dw=asp>=1?sz:sz*asp,dh=asp>=1?sz/asp:sz;ctx.drawImage(img,-dw/2,-dh/2,dw,dh);}
             else if(el.type==='icon'&&el.svgPath){const sz=el.size||120;const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${el.color||'#ffffff'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${el.svgPath}</svg>`;const blob=new Blob([svgStr],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const si=new Image();si.src=url;await new Promise(r=>{si.onload=r;si.onerror=r;});ctx.drawImage(si,-sz/2,-sz/2,sz,sz);URL.revokeObjectURL(url);}
             else{ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${el.size||120}px Arial`;ctx.fillText(el.content,0,0);}
             ctx.restore();
@@ -1167,6 +1249,7 @@ function App() {
                                     <Accordion title="✏️ Manually select screen">
                                         <SearchSelect label="Collection (PLP)" items={collections} selected={selColl} onSelect={setSelColl} query={collQ} onQueryChange={onCollQChange} searching={searchingC} displayKey="title" valueKey="handle"/>
                                         <SearchSelect label="Product (PDP)" items={products} selected={selProd} onSelect={setSelProd} query={prodQ} onQueryChange={onProdQChange} searching={searchingP} displayKey="title" valueKey="id"/>
+                                        <Btn onClick={recaptureManualScreens} disabled={capturing||(!selColl&&!selProd)} variant="primary" className="w-full mt-2">{capturing?'⏳ Capturing…':'📸 Recapture PLP & PDP'}</Btn>
                                     </Accordion>
                                 </div>
                             )}
