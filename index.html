@@ -824,16 +824,17 @@ function App() {
         const plpUrl = links.plpBase&&useColl ? `${links.plpBase}?collectionHandle=${useColl}` : links.plpBase;
 
         const slots = [
-            {url:links.home,               label:'Home',        waitFor:2500, scroll:true},
-            {url:links.collectionsListBase,label:'Collections', waitFor:2000, scroll:true},
-            {url:plpUrl,                   label:'PLP',         waitFor:2500, scroll:true},
-            {url:pdpUrl,                   label:'PDP',         waitFor:2000, scroll:true},
-            {url:links.account,            label:'Account',     waitFor:2000, scroll:true},
+            {url:links.home,               label:'Home',        waitFor:5000, scroll:true},
+            {url:links.collectionsListBase,label:'Collections', waitFor:4000, scroll:true},
+            {url:plpUrl,                   label:'PLP',         waitFor:5000, scroll:true},
+            {url:pdpUrl,                   label:'PDP',         waitFor:4000, scroll:true},
+            {url:links.account,            label:'Account',     waitFor:4000, scroll:true},
         ];
         const validSlots = slots.filter(s=>s.url);
-        setCapProg(`Capturing ${validSlots.length} screens in parallel…`);
+        let done = 0;
+        setCapProg(`Capturing… 0 of ${validSlots.length}`);
 
-        // ── PATCHED: calls /api/screenshot-proxy instead of Microlink directly ──
+        // ── Progressive capture: each screenshot loads into the UI as soon as it's ready ──
         const captureOne = async (slot) => {
             console.log(`[Tapcart] 📸 Capturing ${slot.label}:`, slot.url);
             try {
@@ -849,20 +850,27 @@ function App() {
                 const data = await res.json();
                 if (!data.ok || !data.image) {
                     console.warn(`[Tapcart] ⏭️ No screenshot for ${slot.label}:`, data.error);
+                    done++;
+                    setCapProg(`Capturing… ${done} of ${validSlots.length}`);
                     return null;
                 }
+                // Immediately load this screenshot into the UI
+                const id = nextId++; setLibCounter(id);
+                setLibrary(lib=>[...(clearFirst?lib.filter(l=>l.id<id):lib), {id, label:slot.label, dataUrl:data.image}]);
+                setScreenshots(ss=>ss.map(s=>s.label===slot.label?{...s,screenshotImage:data.image,containerScale:1,containerX:0,containerY:0}:s));
+                captured++;
+                done++;
+                setCapProg(`Capturing… ${done} of ${validSlots.length}`);
                 return { label: slot.label, dataUrl: data.image };
-            } catch(err) { console.error(slot.label, err); return null; }
+            } catch(err) {
+                console.error(slot.label, err);
+                done++;
+                setCapProg(`Capturing… ${done} of ${validSlots.length}`);
+                return null;
+            }
         };
 
-        const results = await Promise.all(validSlots.map(captureOne));
-        for (const r of results) {
-            if (!r) continue;
-            const id=nextId++; setLibCounter(id);
-            setLibrary(lib=>[...(clearFirst?lib.filter(l=>l.id<id):lib), {id,label:r.label,dataUrl:r.dataUrl}]);
-            setScreenshots(ss=>ss.map(s=>s.label===r.label?{...s,screenshotImage:r.dataUrl,containerScale:1,containerX:0,containerY:0}:s));
-            captured++;
-        }
+        await Promise.all(validSlots.map(captureOne));
         setCapProg(''); setCapturing(false);
         if (captured>0) alert(`✅ ${captured} screenshot${captured>1?'s':''} captured!\n\nCart & Notifs require manual uploads — use + Upload in the library.`);
         else alert('❌ No screenshots captured.\n\nMake sure the Vercel proxy route /api/screenshot-proxy is deployed.');
