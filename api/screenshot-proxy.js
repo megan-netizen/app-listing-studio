@@ -2,7 +2,7 @@
 // Vercel serverless function — proxies Microlink screenshot requests server-side
 // so the browser never calls Microlink directly (fixes CORS + Cloudflare block).
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Allow your Vercel app to call this
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
