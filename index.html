@@ -586,20 +586,53 @@ function App() {
         return configsRef.current[idx] || {...DEFAULT_CONFIG, elements:[]};
     };
 
-    const applyToAllScreens = () => {
+    const applyToAllScreens = (scope) => {
         const cfg = getCurrentConfig();
         for (let i=0; i<screenshots.length; i++) {
             const existing = configsRef.current[i] || {...DEFAULT_CONFIG, elements:[]};
-            configsRef.current[i] = {
-                ...cfg,
-                // Preserve per-screen crop positions
-                shotX: existing.shotX,
-                shotY: existing.shotY,
-                shotRotate: existing.shotRotate,
-                elements: cfg.elements.map(e=>({...e})),
-            };
+            if (scope === 'bg') {
+                // Only copy background-related settings
+                configsRef.current[i] = {
+                    ...existing,
+                    useGrad: cfg.useGrad, grad1: cfg.grad1, grad2: cfg.grad2, gradAngle: cfg.gradAngle,
+                    bgImg: cfg.bgImg, bgOp: cfg.bgOp, bgBlur: cfg.bgBlur,
+                    bgOverlay: cfg.bgOverlay, bgOverlayOp: cfg.bgOverlayOp,
+                    noise: cfg.noise, noiseInt: cfg.noiseInt,
+                };
+            } else if (scope === 'screen') {
+                // Only copy screen/frame settings (shadow, corner, rotation) — NOT elements, NOT crop, NOT position
+                configsRef.current[i] = {
+                    ...existing,
+                    shadow: cfg.shadow, sBlur: cfg.sBlur, sOp: cfg.sOp,
+                    sOffX: cfg.sOffX, sOffY: cfg.sOffY, sColor: cfg.sColor,
+                    cornerR: cfg.cornerR, shotRotate: cfg.shotRotate,
+                };
+            } else if (scope === 'text') {
+                // Only copy text settings
+                configsRef.current[i] = {
+                    ...existing,
+                    hSize: cfg.hSize, sSize: cfg.sSize, hY: cfg.hY, sY: cfg.sY,
+                    hSp: cfg.hSp, sSp: cfg.sSp, hMg: cfg.hMg, sMg: cfg.sMg,
+                    hFont: cfg.hFont, sFont: cfg.sFont, hFontName: cfg.hFontName, sFontName: cfg.sFontName,
+                    hWeight: cfg.hWeight, sWeight: cfg.sWeight, tCase: cfg.tCase,
+                };
+            } else if (scope === 'elements') {
+                // Only copy elements
+                configsRef.current[i] = {
+                    ...existing,
+                    elements: cfg.elements.map(e=>({...e})),
+                };
+            } else {
+                // Fallback: copy everything but preserve per-screen crop and elements
+                configsRef.current[i] = {
+                    ...cfg,
+                    shotX: existing.shotX,
+                    shotY: existing.shotY,
+                    elements: existing.elements ? existing.elements.map(e=>({...e})) : [],
+                };
+            }
         }
-        // Restore the active screen's own crop values back
+        // Always keep active screen's full config intact
         configsRef.current[activeIdx] = {...cfg, elements: cfg.elements.map(e=>({...e}))};
     };
 
@@ -613,11 +646,14 @@ function App() {
     };
 
     const applyPresetToAll = (preset) => {
+        // Save current screen's config first
+        configsRef.current[activeIdx] = getCurrentConfig();
         const {containerScale, containerX, containerY, shotRotate: rot} = preset.vals;
         setScreenshots(ss => ss.map(s => ({...s, containerScale, containerX, containerY})));
         setShotRotate(rot);
         for (let i=0; i<screenshots.length; i++) {
             if (configsRef.current[i]) configsRef.current[i].shotRotate = rot;
+            else configsRef.current[i] = {...DEFAULT_CONFIG, shotRotate: rot};
         }
         setSelectedPreset(preset.id);
         showToast('Position preset applied to all screens');
@@ -1394,7 +1430,7 @@ function App() {
                             {!useGrad&&!bgImg&&<ColorInput label="Color" value={cur.backgroundColor} onChange={v=>updCur({backgroundColor:v})}/>}
                             {useGrad&&<div><div className="grid grid-cols-2 gap-2"><ColorInput label="Start" value={grad1} onChange={setGrad1}/><ColorInput label="End" value={grad2} onChange={setGrad2}/></div><Slider label="Angle" value={gradAngle} onChange={setGradAngle} min={0} max={360} unit="°"/></div>}
                             {bgImg&&<div><Slider label="Opacity" value={Math.round(bgOp*100)} onChange={v=>setBgOp(v/100)} min={10} max={100} unit="%"/><Slider label="Blur" value={bgBlur} onChange={setBgBlur} min={0} max={30} unit="px"/><ColorInput label="Overlay color" value={bgOverlay} onChange={setBgOverlay}/><Slider label="Overlay opacity" value={bgOverlayOp} onChange={setBgOverlayOp} min={0} max={100} unit="%"/><button onClick={()=>setBgImg(null)} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove image</button></div>}
-                            <button onClick={()=>{applyToAllScreens();updAll({backgroundColor:cur.backgroundColor,textColor:cur.textColor});showToast('BG applied to all screens');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply BG to all screens</button>
+                            <button onClick={()=>{applyToAllScreens('bg');updAll({backgroundColor:cur.backgroundColor,textColor:cur.textColor});showToast('BG applied to all screens');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply BG to all screens</button>
                             <div className="border-t border-gray-100 pt-3">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <div onClick={()=>setNoise(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${noise?'bg-[#3f1efb]':'bg-gray-200'}`}><div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${noise?'translate-x-4':'translate-x-0.5'}`}/></div>
@@ -1436,7 +1472,7 @@ function App() {
                                 <label className="flex items-center gap-2 cursor-pointer mb-2"><div onClick={()=>setShadow(v=>!v)} className={`w-8 h-4 rounded-full transition-colors flex-shrink-0 ${shadow?'bg-[#3f1efb]':'bg-gray-200'}`}><div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${shadow?'translate-x-4':'translate-x-0.5'}`}/></div><span className="text-xs text-gray-600 font-medium">Enable</span></label>
                                 <div className={shadow?'':'opacity-40 pointer-events-none'}><ColorInput label="Color" value={sColor} onChange={setSColor}/><Slider label="Blur" value={sBlur} onChange={setSBlur} min={0} max={100} unit=""/><Slider label="Opacity" value={Math.round(sOp*100)} onChange={v=>setSOp(v/100)} min={0} max={100} unit="%"/><Slider label="Offset X" value={sOffX} onChange={setSOffX} min={-100} max={100} unit=""/><Slider label="Offset Y" value={sOffY} onChange={setSOffY} min={-100} max={100} unit=""/></div>
                             </Accordion>
-                            <button onClick={()=>{applyToAllScreens();showToast('Screen settings applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors mt-1">Apply screen settings to all</button>
+                            <button onClick={()=>{applyToAllScreens('screen');showToast('Screen settings applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors mt-1">Apply screen settings to all</button>
                         </>)}
 
                         {settingsTab==='text'&&(<>
@@ -1474,7 +1510,7 @@ function App() {
                                 <Slider label="Letter Spacing" value={sSp} onChange={setSSp} min={-10} max={50}/>
                                 <Slider label="Margin" value={sMg} onChange={setSMg} min={0} max={300}/>
                             </Accordion>
-                            <button onClick={()=>{applyToAllScreens();showToast('Text settings applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply text settings to all</button>
+                            <button onClick={()=>{applyToAllScreens('text');showToast('Text settings applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply text settings to all</button>
                         </>)}
 
                         {settingsTab==='elements'&&(<>
@@ -1502,7 +1538,7 @@ function App() {
                                     <Slider label="Y" value={el.y} onChange={v=>setElements(els=>els.map(e=>e.id===el.id?{...e,y:v}:e))} min={0} max={100} unit="%"/>
                                 </div>
                             ))}
-                            {elements.length>0&&<button onClick={()=>{applyToAllScreens();showToast('Elements applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply elements to all</button>}
+                            {elements.length>0&&<button onClick={()=>{applyToAllScreens('elements');showToast('Elements applied to all');}} className="w-full py-1.5 text-[10px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] bg-[#f0effe] hover:bg-[#e8e5fe] rounded-lg transition-colors">Apply elements to all</button>}
                         </>)}
 
                         {settingsTab==='export'&&(<>
