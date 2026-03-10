@@ -530,6 +530,7 @@ function App() {
     const [searchingC, setSearchingC]     = useState(false);
     const [searchingP, setSearchingP]     = useState(false);
     const [brandKit, setBrandKit]         = useState(null);
+    const [leftAccordion, setLeftAccordion] = useState(null);
 
     const canvasRef      = useRef(null);
     const hFontRef       = useRef(null);
@@ -1196,99 +1197,158 @@ function App() {
 
             <div className="flex flex-1 overflow-hidden" style={{height:'calc(100vh - 52px)'}}>
                 {/* ── Left sidebar ── */}
-                <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 flex-shrink-0 space-y-3">
-                        <div>
-                            <span className="section-label">Tapcart App ID</span>
-                            <div className="flex gap-2">
-                                <input type="text" value={appId} onChange={e=>setAppId(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchApp()}
-                                    placeholder="e.g. mLMFK4fI6j"
-                                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white"/>
-                                <Btn onClick={fetchApp} disabled={loadingApp||capturing||!appId.trim()} variant="primary">{loadingApp?'Loading…':capturing?'Capturing…':'Load'}</Btn>
-                            </div>
-                            <div className="mt-2">
-                                <span className="section-label">App Name</span>
-                                <input type="text" value={appName} onChange={e=>setAppName(e.target.value)} placeholder="e.g. NopokoShop"
-                                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white text-gray-700"/>
-                            </div>
-                        </div>
-                        <Accordion title="🎨 Layout Templates">
-                            <div className="grid grid-cols-2 gap-2">
-                                {LAYOUT_TEMPLATES.map(tpl=>{
-                                    const isActive=selectedTemplate===tpl.id;
-                                    return(
-                                        <button key={tpl.id} onClick={()=>applyTemplate(tpl)} className={`rounded-xl border-2 transition-all p-2.5 text-left ${isActive?'border-[#3f1efb] bg-[#f0effe]':'border-gray-200 hover:border-[#8a76f8] bg-white'}`}>
-                                            <div className="flex items-end justify-center gap-px h-8 mb-1 overflow-hidden">
-                                                {tpl.presets.slice(0,5).map((pid,i)=>{const p=POSITION_PRESETS.find(x=>x.id===pid);const v=p?.vals||{containerScale:1,containerX:0,containerY:0,shotRotate:0};const sc=0.6+(v.containerScale-0.75)*0.8;return(<div key={i} className="flex-shrink-0" style={{width:9*Math.min(1.2,Math.max(0.7,sc)),height:16*Math.min(1.2,Math.max(0.7,sc)),border:`1.5px solid ${isActive?'#3f1efb':'#d1d5db'}`,borderRadius:2,transform:`translateY(${-v.containerY*0.01}px) rotate(${v.shotRotate||0}deg)`,background:isActive?'#e0dbff':'#f3f4f6'}}/>);})}
-                                            </div>
-                                            <span className="text-[9px] font-bold text-gray-700 block">{tpl.name}</span>
-                                            <span className="text-[7px] text-gray-400 block mt-0.5">{tpl.desc}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </Accordion>
-                        {brandKit&&(
-                            <div className="rounded-xl border border-gray-200 overflow-hidden">
-                                <div className="px-3 py-2 bg-gray-50"><span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">Brand Kit</span></div>
-                                {hasBrandColors?(
-                                    <div className="px-3 py-2 space-y-2">
-                                        {brandKit.backgroundColor&&<div className="flex items-center gap-2"><div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0" style={{background:brandKit.backgroundColor}}/><div><div className="text-[9px] text-gray-400">Brand Color</div><div className="text-[10px] font-mono font-medium text-gray-700">{brandKit.backgroundColor}</div></div></div>}
-                                        {brandKit.textColor&&<div className="flex items-center gap-2"><div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0" style={{background:brandKit.textColor}}/><div><div className="text-[9px] text-gray-400">Button Text</div><div className="text-[10px] font-mono font-medium text-gray-700">{brandKit.textColor}</div></div></div>}
-                                        {brandKit.fontFamily&&<div className="flex items-center gap-2"><div className="w-6 h-6 rounded border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-500">Aa</div><div><div className="text-[9px] text-gray-400">Font</div><div className="text-[10px] font-medium text-gray-700">{brandKit.fontRaw||brandKit.fontFamily}</div></div></div>}
+                <div className="bg-white border-r border-gray-200 flex flex-col flex-shrink-0 overflow-hidden" style={{width:'280px'}}>
+
+                    {/* ─── Zone 1: App Header ─── */}
+                    <div className="px-3 pt-3 pb-2.5 border-b border-gray-100 flex-shrink-0">
+                        {appLinks ? (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#3f1efb] to-[#6d5aff] flex items-center justify-center flex-shrink-0 shadow-sm">
+                                        <span className="text-white text-xs font-bold">{(appName||appId||'?')[0].toUpperCase()}</span>
                                     </div>
-                                ):<div className="px-3 py-2"><p className="text-[10px] text-gray-400">No brand colors found.</p></div>}
-                                {brandKit.allColors&&Object.keys(brandKit.allColors).length>0&&<SuggestColors allColors={brandKit.allColors} onApplyBg={hex=>{updAll({backgroundColor:hex});setUseGrad(false);setBgImg(null);}} onApplyText={hex=>updAll({textColor:hex})}/>}
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] font-bold text-gray-900 truncate">{appName||'Untitled App'}</p>
+                                        <p className="text-[9px] text-gray-400 font-mono">{appId}</p>
+                                    </div>
+                                </div>
+                                <button onClick={()=>{setAppLinks(null);}} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2.5">
+                                <div>
+                                    <label className="text-[9px] font-bold tracking-widest uppercase text-gray-400 block mb-1">Tapcart App ID</label>
+                                    <div className="flex gap-2">
+                                        <input type="text" value={appId} onChange={e=>setAppId(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchApp()}
+                                            placeholder="e.g. mLMFK4fI6j"
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white"/>
+                                        <Btn onClick={fetchApp} disabled={loadingApp||capturing||!appId.trim()} variant="primary">{loadingApp?'Loading…':capturing?'Capturing…':'Load'}</Btn>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold tracking-widest uppercase text-gray-400 block mb-1">App Name</label>
+                                    <input type="text" value={appName} onChange={e=>setAppName(e.target.value)} placeholder="e.g. NopokoShop"
+                                        className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3f1efb] bg-white text-gray-700"/>
+                                </div>
                             </div>
                         )}
                     </div>
-                    <div className="flex flex-col flex-1 overflow-hidden">
-                        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
-                            {appLinks&&collections.length>0&&(
-                                <div className="mb-3">
-                                    <Accordion title="✏️ Manually select screen">
+
+                    {/* ─── Zone 2: Library (always visible, shrinks when accordion open) ─── */}
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 min-h-0" style={{minHeight:120}}>
+                        <div className="flex items-center justify-between mb-2.5">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Screenshot Library</span>
+                            <button onClick={()=>libUploadRef.current?.click()} className="text-[9px] font-semibold text-[#3f1efb] hover:text-[#2e14d5] px-1.5 py-0.5 rounded hover:bg-[#f0effe] transition-colors">+ Upload</button>
+                        </div>
+                        <input ref={libUploadRef} type="file" accept="image/*" multiple onChange={uploadLibImages} className="hidden"/>
+                        {capturing?(
+                            <div>
+                                <div className="grid grid-cols-3 gap-2">{[1,2,3,4,5].map(i=><div key={i} className="rounded-xl overflow-hidden" style={{aspectRatio:'9/19.5'}}><div className="w-full h-full bg-gray-100 animate-pulse" style={{animationDelay:`${i*120}ms`}}/></div>)}</div>
+                                <div className="flex flex-col items-center gap-1.5 mt-3">
+                                    <div className="flex gap-1">{[0,1,2].map(i=><span key={i} className="w-1.5 h-1.5 rounded-full bg-[#3f1efb] animate-bounce" style={{animationDelay:`${i*150}ms`}}/>)}</div>
+                                    <p className="text-[10px] text-[#3f1efb] font-semibold animate-pulse">{capProg||'Capturing…'}</p>
+                                </div>
+                            </div>
+                        ):library.length===0?(
+                            <div className="flex items-center justify-center py-8"><p className="text-xs text-gray-300 text-center leading-relaxed">No screenshots yet.<br/>Capture or upload to get started.</p></div>
+                        ):(
+                            <>
+                                <div className="grid grid-cols-3 gap-2">{library.map(item=><LibThumb key={item.id} item={item} inUse={usedUrls.has(item.dataUrl)} isSelected={selLibId===item.id&&cur.screenshotImage===item.dataUrl} onSelect={()=>assignToSlot(item)} onDelete={()=>setLibrary(lib=>lib.filter(l=>l.id!==item.id))}/>)}</div>
+                                <p className="text-[9px] text-gray-400 text-center mt-2.5">Tap to assign to <span className="font-semibold text-[#3f1efb]">{cur.label||`Slot ${activeIdx+1}`}</span></p>
+                                <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1.5 text-[9px] text-amber-700 leading-relaxed">
+                                    <span className="font-semibold">🛒 Cart & Notifs</span> — upload manually via + Upload
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* ─── Zone 3: Collapsible setup sections ─── */}
+                    <div className="border-t border-gray-200 flex-shrink-0 overflow-y-auto bg-gray-50/40">
+                        {/* Brand Kit */}
+                        <div className="border-b border-gray-100">
+                            <button onClick={()=>setLeftAccordion(leftAccordion==='brand'?null:'brand')} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50/80 transition-colors">
+                                <span className="text-xs">🎨</span>
+                                <span className="text-[11px] font-semibold text-gray-700 flex-1 text-left">Brand Kit</span>
+                                {brandKit&&hasBrandColors&&<span className="text-[8px] font-bold bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full">Active</span>}
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" className={`transition-transform duration-200 ${leftAccordion==='brand'?'rotate-180':''}`}><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            {leftAccordion==='brand'&&(
+                                <div className="px-3 pb-3">
+                                    {brandKit&&hasBrandColors?(
+                                        <div className="space-y-2">
+                                            <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+                                                {brandKit.backgroundColor&&<div className="flex items-center gap-2.5 px-3 py-2"><div className="w-6 h-6 rounded-md flex-shrink-0" style={{background:brandKit.backgroundColor}}/><div><p className="text-[8px] text-gray-400">Brand Color</p><p className="text-[10px] font-mono font-semibold text-gray-700">{brandKit.backgroundColor}</p></div></div>}
+                                                {brandKit.textColor&&<div className="flex items-center gap-2.5 px-3 py-2"><div className="w-6 h-6 rounded-md border border-gray-200 flex-shrink-0" style={{background:brandKit.textColor}}/><div><p className="text-[8px] text-gray-400">Button Text</p><p className="text-[10px] font-mono font-semibold text-gray-700">{brandKit.textColor}</p></div></div>}
+                                                {brandKit.fontFamily&&<div className="flex items-center gap-2.5 px-3 py-2"><div className="w-6 h-6 rounded-md bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-400 flex-shrink-0">Aa</div><div><p className="text-[8px] text-gray-400">Font</p><p className="text-[10px] font-semibold text-gray-700">{brandKit.fontRaw||brandKit.fontFamily}</p></div></div>}
+                                            </div>
+                                            {brandKit.allColors&&Object.keys(brandKit.allColors).length>0&&<SuggestColors allColors={brandKit.allColors} onApplyBg={hex=>{updAll({backgroundColor:hex});setUseGrad(false);setBgImg(null);}} onApplyText={hex=>updAll({textColor:hex})}/>}
+                                        </div>
+                                    ):<p className="text-[10px] text-gray-400">{brandKit?'No brand colors found.':'Load an app to see brand kit.'}</p>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Layout Templates */}
+                        <div className="border-b border-gray-100">
+                            <button onClick={()=>setLeftAccordion(leftAccordion==='layout'?null:'layout')} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50/80 transition-colors">
+                                <span className="text-xs">📐</span>
+                                <span className="text-[11px] font-semibold text-gray-700 flex-1 text-left">Layout Templates</span>
+                                {selectedTemplate&&<span className="text-[8px] font-bold bg-[#f0effe] text-[#3f1efb] px-1.5 py-0.5 rounded-full">{LAYOUT_TEMPLATES.find(t=>t.id===selectedTemplate)?.name}</span>}
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" className={`transition-transform duration-200 ${leftAccordion==='layout'?'rotate-180':''}`}><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            {leftAccordion==='layout'&&(
+                                <div className="px-3 pb-3">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {LAYOUT_TEMPLATES.map(tpl=>{
+                                            const isActive=selectedTemplate===tpl.id;
+                                            return(
+                                                <button key={tpl.id} onClick={()=>applyTemplate(tpl)} className={`rounded-lg border-2 transition-all p-2.5 text-left ${isActive?'border-[#3f1efb] bg-[#f0effe]':'border-gray-200 hover:border-[#8a76f8] bg-white'}`}>
+                                                    <div className="flex items-end justify-center gap-px h-5 mb-1.5 overflow-hidden">
+                                                        {tpl.presets.slice(0,5).map((pid,i)=>{const p=POSITION_PRESETS.find(x=>x.id===pid);const v=p?.vals||{containerScale:1,containerX:0,containerY:0,shotRotate:0};const sc=0.6+(v.containerScale-0.75)*0.8;return(<div key={i} className="flex-shrink-0" style={{width:7*Math.min(1.2,Math.max(0.7,sc)),height:12*Math.min(1.2,Math.max(0.7,sc)),border:`1.5px solid ${isActive?'#3f1efb':'#d1d5db'}`,borderRadius:2,transform:`translateY(${-v.containerY*0.008}px) rotate(${v.shotRotate||0}deg)`,background:isActive?'#e0dbff':'#f3f4f6'}}/>);})}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-gray-700 block leading-tight">{tpl.name}</span>
+                                                    <span className="text-[7px] text-gray-400 leading-tight">{tpl.desc}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recapture Screens */}
+                        {appLinks&&collections.length>0&&(
+                            <div className="border-b border-gray-100">
+                                <button onClick={()=>setLeftAccordion(leftAccordion==='screens'?null:'screens')} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50/80 transition-colors">
+                                    <span className="text-xs">🔍</span>
+                                    <span className="text-[11px] font-semibold text-gray-700 flex-1 text-left">Recapture Screens</span>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" className={`transition-transform duration-200 ${leftAccordion==='screens'?'rotate-180':''}`}><path d="M6 9l6 6 6-6"/></svg>
+                                </button>
+                                {leftAccordion==='screens'&&(
+                                    <div className="px-3 pb-3 space-y-2.5">
+                                        <p className="text-[10px] text-gray-400 leading-relaxed">Pick a collection and/or product, then recapture just PLP & PDP.</p>
                                         <SearchSelect label="Collection (PLP)" items={collections} selected={selColl} onSelect={setSelColl} query={collQ} onQueryChange={onCollQChange} searching={searchingC} displayKey="title" valueKey="handle"/>
                                         <SearchSelect label="Product (PDP)" items={products} selected={selProd} onSelect={setSelProd} query={prodQ} onQueryChange={onProdQChange} searching={searchingP} displayKey="title" valueKey="id"/>
-                                        <Btn onClick={recaptureManualScreens} disabled={capturing||(!selColl&&!selProd)} variant="primary" className="w-full mt-2">{capturing?'⏳ Capturing…':'📸 Recapture PLP & PDP'}</Btn>
-                                    </Accordion>
-                                </div>
-                            )}
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="section-label mb-0">Screenshot Library</span>
-                                <button onClick={()=>libUploadRef.current?.click()} className="text-[10px] font-semibold text-gray-600 hover:text-gray-800 px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200">+ Upload</button>
+                                        <Btn onClick={recaptureManualScreens} disabled={capturing||(!selColl&&!selProd)} variant="primary" className="w-full">{capturing?'⏳ Capturing…':'📸 Recapture PLP & PDP'}</Btn>
+                                    </div>
+                                )}
                             </div>
-                            <input ref={libUploadRef} type="file" accept="image/*" multiple onChange={uploadLibImages} className="hidden"/>
-                            {capturing?(
-                                <div>
-                                    <div className="grid grid-cols-3 gap-2">{[1,2,3,4].map(i=><div key={i} className="rounded-lg overflow-hidden" style={{aspectRatio:'9/19.5'}}><div className="w-full h-full bg-gray-100 animate-pulse" style={{animationDelay:`${i*150}ms`}}/></div>)}</div>
-                                    <div className="flex flex-col items-center gap-1.5 mt-4">
-                                        <div className="flex gap-1">{[0,1,2].map(i=><span key={i} className="w-1.5 h-1.5 rounded-full bg-[#3f1efb] animate-bounce" style={{animationDelay:`${i*150}ms`}}/>)}</div>
-                                        <p className="text-[10px] text-[#3f1efb] font-semibold animate-pulse">{capProg||'Capturing…'}</p>
-                                    </div>
-                                </div>
-                            ):library.length===0?(
-                                <div className="flex items-center justify-center py-8"><p className="text-xs text-gray-300 text-center leading-relaxed">No screenshots yet.<br/>Capture or upload to get started.</p></div>
-                            ):(
-                                <>
-                                    <div className="grid grid-cols-3 gap-2">{library.map(item=><LibThumb key={item.id} item={item} inUse={usedUrls.has(item.dataUrl)} isSelected={selLibId===item.id&&cur.screenshotImage===item.dataUrl} onSelect={()=>assignToSlot(item)} onDelete={()=>setLibrary(lib=>lib.filter(l=>l.id!==item.id))}/>)}</div>
-                                    <p className="text-[10px] text-gray-400 text-center mt-3">Tap to assign to <span className="font-semibold text-[#3f1efb]">{cur.label||`Slot ${activeIdx+1}`}</span></p>
-                                </>
-                            )}
-                        </div>
-                        <div className="px-4 pb-4 pt-2 border-t border-gray-100 flex-shrink-0">
-                            {appLinks?(
-                                <div className="space-y-2">
-                                    {library.length===0
-                                        ?<Btn onClick={captureScreenshots} disabled={capturing} variant="primary" className="w-full">{capturing?'⏳ Capturing…':'📸 Capture'}</Btn>
-                                        :<Btn onClick={recaptureScreenshots} disabled={capturing} variant="danger" className="w-full">{capturing?'⏳ Capturing…':'🔄 Re-capture'}</Btn>
-                                    }
-                                    {capProg&&<p className="text-[10px] text-[#3f1efb] animate-pulse">{capProg}</p>}
-                                    <div className="rounded-lg bg-[#f0effe] border border-[#c4b9fc] px-3 py-2 text-[10px] text-[#2e14d5] leading-relaxed">
-                                        🛒 <span className="font-semibold">Cart & Notifs:</span> Upload manually via + Upload.
-                                    </div>
-                                </div>
-                            ):<p className="text-[10px] text-gray-400">Load an App ID above to capture.</p>}
-                        </div>
+                        )}
+                    </div>
+
+                    {/* ─── Zone 4: Pinned capture action ─── */}
+                    <div className="px-3 py-2.5 border-t border-gray-100 bg-white flex-shrink-0">
+                        {appLinks?(
+                            <div className="space-y-1.5">
+                                {library.length===0
+                                    ?<Btn onClick={captureScreenshots} disabled={capturing} variant="primary" className="w-full">{capturing?'⏳ Capturing…':'📸 Capture'}</Btn>
+                                    :<Btn onClick={recaptureScreenshots} disabled={capturing} variant="danger" className="w-full">{capturing?'⏳ Capturing…':'🔄 Re-capture All'}</Btn>
+                                }
+                                {capProg&&<p className="text-[10px] text-[#3f1efb] font-semibold animate-pulse text-center">{capProg}</p>}
+                            </div>
+                        ):<p className="text-[10px] text-gray-400 text-center">Load an App ID to get started.</p>}
                     </div>
                 </div>
 
